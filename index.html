@@ -8440,7 +8440,9 @@ async function goToDebrief(fromHoldPoint) {
     const debriefPrompt = buildDebriefPrompt(fromHoldPoint);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    // 120s: Sonnet 4.6 schrijft uitgebreider dan Sonnet 4 — een volledige
+    // debrief-JSON haalt de oude 45s-grens niet altijd meer.
+    const timeout = setTimeout(() => controller.abort(), 120000);
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -8452,7 +8454,7 @@ async function goToDebrief(fromHoldPoint) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{ role: 'user', content: debriefPrompt }]
       }),
       signal: controller.signal
@@ -8472,7 +8474,13 @@ async function goToDebrief(fromHoldPoint) {
     if (!raw) throw new Error('Leeg antwoord van API');
 
     const wasTruncated = data.stop_reason === 'max_tokens';
-    const clean = raw.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+    let clean = raw.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+    // Vangnet: knip eventuele inleidende/afsluitende tekst rond het JSON-object
+    // weg. Bij truncatie ontbreekt de laatste '}' — dan alleen vanaf de eerste '{' knippen.
+    const jsonStart = clean.indexOf('{');
+    if (jsonStart > 0) clean = clean.slice(jsonStart);
+    const jsonEnd = clean.lastIndexOf('}');
+    if (!wasTruncated && jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.slice(0, jsonEnd + 1);
 
     // Robuuste JSON-parse: direct → reparatie → truncatie-recovery
     let debrief;
