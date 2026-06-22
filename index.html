@@ -1274,6 +1274,14 @@ input, textarea {
   margin-bottom: 4px;
   font-weight: 500;
 }
+#environment-text .env-note {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+  font-style: italic;
+}
 .live-dot {
   display: inline-block;
   width: 6px;
@@ -1287,6 +1295,67 @@ input, textarea {
   0%, 100% { opacity: 0.35; transform: scale(0.8); }
   50%      { opacity: 1;    transform: scale(1); }
 }
+
+/* Eenmalige coach-mark die het waarneem-blok aanwijst bij scenariostart
+   (idioom uit Field-player). */
+#environment-text.env-coach-highlight {
+  box-shadow: inset 0 0 0 1.5px var(--cyan), 0 0 18px rgba(0, 232, 255, 0.30);
+}
+#env-coachmark {
+  position: fixed;
+  z-index: 4000;
+  max-width: 320px;
+  background: linear-gradient(180deg, #0d2f3c 0%, #0a2530 100%);
+  border: 1px solid var(--cyan);
+  border-radius: 8px;
+  padding: 13px 15px 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.55), 0 0 22px rgba(0,232,255,0.18);
+  display: none;
+}
+#env-coachmark.show {
+  display: block;
+  animation: ecm-in 0.28s ease-out;
+}
+@keyframes ecm-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#env-coachmark .ecm-arrow {
+  position: absolute;
+  top: -8px;
+  width: 14px;
+  height: 14px;
+  background: #0d2f3c;
+  border-left: 1px solid var(--cyan);
+  border-top: 1px solid var(--cyan);
+  transform: rotate(45deg);
+}
+#env-coachmark .ecm-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cyan);
+  margin-bottom: 6px;
+}
+#env-coachmark .ecm-body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+#env-coachmark .ecm-btn {
+  margin-top: 11px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bg-deep);
+  background: var(--cyan);
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#env-coachmark .ecm-btn:hover { background: #50f2ff; }
 
 .observation-buttons {
   display: grid;
@@ -1423,7 +1492,11 @@ input, textarea {
   display: flex;
   justify-content: space-between;
 }
-.msg .meta .role { color: var(--cyan); font-weight: 500; }
+.msg .meta .role {
+  color: var(--cyan); font-weight: 500;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.msg .meta .time { flex-shrink: 0; padding-left: 8px; }
 
 .msg.you {
   background: var(--green-bg);
@@ -1856,6 +1929,43 @@ input, textarea {
   color: var(--text);
   background: var(--panel-sub);
 }
+
+/* ── Sessie-afsluiting overlay (EXIT) — idioom uit CRO-player ── */
+#session-end-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.85); z-index: 999;
+  align-items: center; justify-content: center;
+}
+#session-end-overlay.visible { display: flex; }
+#session-end-box {
+  background: var(--bg2); border: 1px solid var(--border-hi);
+  border-radius: 8px; padding: 36px 40px; max-width: 420px; width: 90%;
+  text-align: center;
+}
+#session-end-box .end-icon { font-size: 32px; margin-bottom: 12px; }
+#session-end-box .end-title {
+  font-family: var(--cond); font-size: 20px; font-weight: 700;
+  color: var(--text-bright); margin-bottom: 8px;
+}
+#session-end-box .end-sub {
+  font-family: var(--mono); font-size: 13px; color: var(--text-dim);
+  margin-bottom: 28px; line-height: 1.6;
+}
+#session-end-box .end-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.end-btn-primary {
+  padding: 9px 24px; background: var(--bg3);
+  border: 1px solid var(--cyan); color: var(--cyan);
+  border-radius: 4px; font-family: var(--mono); font-size: 13px;
+  cursor: pointer; transition: all .15s; letter-spacing: 0.5px;
+}
+.end-btn-primary:hover { background: var(--cyan); color: var(--bg); }
+.end-btn-secondary {
+  padding: 9px 24px; background: transparent;
+  border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 4px; font-family: var(--mono); font-size: 13px;
+  cursor: pointer; transition: all .15s; letter-spacing: 0.5px;
+}
+.end-btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
 
 /* Scrollbars */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -2653,6 +2763,10 @@ input, textarea {
   <div class="name-input">
     <label data-i18n="brief.nameLabel">Jouw naam (voor in de rapportages)</label>
     <input id="input-name" type="text" placeholder="Voor- en achternaam" data-i18n-ph="brief.namePh">
+    <label data-i18n="brief.roleLabel" style="margin-top:14px">Functie</label>
+    <input id="input-role" type="text" placeholder="bijv. Onderhoudstechnicus" data-i18n-ph="brief.rolePh">
+    <label data-i18n="brief.orgLabel" style="margin-top:14px">Organisatie</label>
+    <input id="input-org" type="text" placeholder="Bedrijfsnaam" data-i18n-ph="brief.orgPh">
   </div>
 
   <div class="lang-select">
@@ -2696,6 +2810,15 @@ input, textarea {
     </div>
   </div>
 
+  <!-- Eenmalige coach-mark: legt bij scenariostart uit dat alleen de deelnemer
+       de omgevingssignalen waarneemt en ze via de radio moet melden. -->
+  <div id="env-coachmark" role="dialog">
+    <div class="ecm-arrow"></div>
+    <div class="ecm-title" data-i18n="coach.envTitle">👁 Alleen jij neemt dit waar</div>
+    <div class="ecm-body" data-i18n="coach.envBody">Dit blok toont wat jij ter plaatse ziet, hoort en ruikt. De mensen aan de andere kant van de radio (zoals de vergunningverstrekker) zien dit niet. Beoordeel zelf wat belangrijk is en meld het via de radio.</div>
+    <button type="button" class="ecm-btn" onclick="dismissEnvCoachmark()" data-i18n="coach.gotIt">Begrepen</button>
+  </div>
+
   <div class="panels">
 
     <!-- LEFT PANEL -->
@@ -2728,7 +2851,8 @@ input, textarea {
       </div>
 
       <div id="environment-text">
-        <span class="env-label" data-i18n="env.label">Je neemt waar<span class="live-dot" title="Dynamische waarneming — wijzigt mee met de situatie" data-i18n-title="env.liveTitle"></span></span>
+        <span class="env-label"><span data-i18n="env.label">Je neemt waar</span><span class="live-dot" title="Dynamische waarneming — wijzigt mee met de situatie" data-i18n-title="env.liveTitle"></span></span>
+        <span class="env-note" data-i18n="env.note">De mensen aan de radio zien dit niet — meld wat van belang is via de radio.</span>
         <span id="environment-content">—</span>
       </div>
 
@@ -2895,6 +3019,25 @@ input, textarea {
     <button class="debrief-action-btn" id="btn-export-xlsx" onclick="exportDebriefExcel()">
       <span class="ico">⬇</span> <span data-i18n="debrief.xlsx">Excel-rij</span>
     </button>
+    <button class="debrief-action-btn" id="btn-export-dossier" onclick="downloadRunRecord()">
+      <span class="ico">🗂</span> <span data-i18n="debrief.dossier">Bewaar in dossier</span>
+    </button>
+    <button class="debrief-action-btn" id="btn-exit-session" onclick="confirmExitSession()">
+      <span class="ico">✕</span> <span data-i18n="debrief.exit">Afsluiten</span>
+    </button>
+  </div>
+</div>
+
+<!-- Sessie-afsluiting overlay (EXIT) -->
+<div id="session-end-overlay">
+  <div id="session-end-box">
+    <div class="end-icon">✓</div>
+    <div class="end-title" id="end-title">Training afgerond</div>
+    <div class="end-sub" id="end-sub">De debrief is klaar en de rapporten zijn beschikbaar.<br>Start een nieuw scenario of ga terug naar de debrief.</div>
+    <div class="end-btn-row">
+      <button class="end-btn-primary" id="btn-new-session" onclick="location.reload()">↺ Nieuw scenario</button>
+      <button class="end-btn-secondary" id="btn-back-debrief" onclick="closeExitOverlay()">Terug naar debrief</button>
+    </div>
   </div>
 </div>
 
@@ -3094,9 +3237,9 @@ const SCENARIOS = {
   },
 
   "roles": [
-    { "id": "r1", "name": "Vergunningverstrekker", "type": "permit-issuer",
+    { "id": "r1", "name": "Verg.verstrekker", "type": "permit-issuer",
       "behavior": "Werkverantwoordelijke die de werkvergunning afgeeft en accepteert. Formeel, gestructureerd. Vraagt of de deelnemer de scope en isolaties begrijpt; geeft pas akkoord als de acceptatie-LMRA is gedaan. Verwacht een correcte afmelding bij afronding." },
-    { "id": "r2", "name": "Installatieverantwoordelijke", "type": "area-authority",
+    { "id": "r2", "name": "Inst.verantw.", "type": "area-authority",
       "behavior": "Operator/IV die de installatie heeft veiliggesteld en overdraagt. Komt in beeld als de deelnemer een afwijking in de isolatie meldt. Kan de isolatie herstellen en de drukloosheid opnieuw aantonen. Waardeert dat de deelnemer stopt en meldt." },
     { "id": "r3", "name": "Werkleider", "type": "supervisor",
       "behavior": "Eigen werkleider van de monteur/contractor. Ondersteunend, praktisch. Verschijnt bij twijfel of escalatie en bekrachtigt de stop-work-bevoegdheid van de deelnemer." }
@@ -3632,6 +3775,10 @@ function normalizeScenario(sc) {
 const STATE = {
   apiKey: '',
   participantName: '',
+  participantRole: '',
+  participantOrg: '',
+  imperfectionsCaught: {},              // {impId: ms} — onvolkomenheid terecht opgemerkt
+  imperfectionsFalse: {},               // {impId: ms} — afleider onterecht als probleem bestempeld
   communicationLanguage: 'nl',          // 'nl' | 'de' | 'en' | 'es' — taal voor AI-communicatie
   currentPhase: 'prep',                 // wordt aangepast aan scenarioType bij start
   currentLocationId: null,              // gezet bij scenario-start
@@ -3770,6 +3917,10 @@ const I18N = {
     'brief.permit': 'Werkpermit',
     'brief.nameLabel': 'Jouw naam (voor in de rapportages)',
     'brief.namePh': 'Voor- en achternaam',
+    'brief.roleLabel': 'Functie',
+    'brief.rolePh': 'bijv. Onderhoudstechnicus',
+    'brief.orgLabel': 'Organisatie',
+    'brief.orgPh': 'Bedrijfsnaam',
     'brief.commLang': 'Communicatietaal',
     'brief.langNote': 'Radio, instructeur en omgevingstekst in deze taal. HMI-labels en vaktermen blijven Engels.',
     'brief.start': 'Scenario starten',
@@ -3782,7 +3933,11 @@ const I18N = {
     'mid.fieldview': 'Veldzicht',
     'mid.placeholderHint': '[MVP: Storyline-slide verschijnt hier zodra URLs vervangen worden]',
     'env.label': 'Je neemt waar',
+    'env.note': 'De mensen aan de radio zien dit niet — meld wat van belang is via de radio.',
     'env.liveTitle': 'Dynamische waarneming — wijzigt mee met de situatie',
+    'coach.envTitle': '👁 Alleen jij neemt dit waar',
+    'coach.envBody': 'Dit blok toont wat jij ter plaatse ziet, hoort en ruikt. De mensen aan de andere kant van de radio (zoals de vergunningverstrekker) zien dit niet. Beoordeel zelf wat belangrijk is en meld het via de radio.',
+    'coach.gotIt': 'Begrepen',
     'obs.look': '👁 Kijk', 'obs.listen': '👂 Luister', 'obs.smell': '👃 Ruik', 'obs.touch': '✋ Voel',
     'input.speakTo': 'Spreek tot:',
     'voice.dismissTitle': 'Verbergen',
@@ -3810,6 +3965,12 @@ const I18N = {
     'debrief.loading': 'De Instructeur stelt de evaluatie samen...',
     'debrief.pdf': 'PDF-rapport',
     'debrief.xlsx': 'Excel-rij',
+    'debrief.dossier': 'Bewaar in dossier',
+    'debrief.exit': 'Afsluiten',
+    'end.title': 'Training afgerond',
+    'end.sub': 'De debrief is klaar en de rapporten zijn beschikbaar.<br>Start een nieuw scenario of ga terug naar de debrief.',
+    'end.new': '↺ Nieuw scenario',
+    'end.back': 'Terug naar debrief',
     // dynamic render labels (gewired in v34)
     'tab.opdracht': 'Opdracht', 'tab.sop': 'SOP', 'tab.situatie': 'Situatie', 'tab.procedure': 'Procedure',
     'opd.task': 'Taak', 'opd.ppe': 'Vereiste PBM',
@@ -3830,6 +3991,8 @@ const I18N = {
     'err.voice': 'Spraakfout: ',
     'log.phase': 'Fase: {name}',
     'log.actionDone': 'Actie voltooid: {label}',
+    'log.impCaught': '✓ Onvolkomenheid opgemerkt: {label}',
+    'log.impFalse': '✗ Onterecht als probleem gemeld: {label}',
   },
   en: {
     'key.sub': 'No API key found in the scenario file. Enter an Anthropic API key manually to continue.',
@@ -3855,6 +4018,10 @@ const I18N = {
     'brief.permit': 'Work permit',
     'brief.nameLabel': 'Your name (for the reports)',
     'brief.namePh': 'First and last name',
+    'brief.roleLabel': 'Function',
+    'brief.rolePh': 'e.g. Maintenance technician',
+    'brief.orgLabel': 'Organisation',
+    'brief.orgPh': 'Company name',
     'brief.commLang': 'Communication language',
     'brief.langNote': 'Radio, instructor and environment text in this language. HMI labels and technical terms stay English.',
     'brief.start': 'Start scenario',
@@ -3866,7 +4033,11 @@ const I18N = {
     'mid.fieldview': 'Field view',
     'mid.placeholderHint': '[MVP: Storyline slide appears here once URLs are set]',
     'env.label': 'You observe',
+    'env.note': 'The people on the radio cannot see this — report what matters over the radio.',
     'env.liveTitle': 'Dynamic observation — changes with the situation',
+    'coach.envTitle': '👁 Only you perceive this',
+    'coach.envBody': 'This panel shows what you see, hear and smell on site. The people on the other end of the radio (such as the permit issuer) cannot see it. Judge for yourself what matters and report it over the radio.',
+    'coach.gotIt': 'Got it',
     'obs.look': '👁 Look', 'obs.listen': '👂 Listen', 'obs.smell': '👃 Smell', 'obs.touch': '✋ Feel',
     'input.speakTo': 'Speak to:',
     'voice.dismissTitle': 'Hide',
@@ -3891,6 +4062,12 @@ const I18N = {
     'debrief.loading': 'The instructor is preparing the evaluation...',
     'debrief.pdf': 'PDF report',
     'debrief.xlsx': 'Excel row',
+    'debrief.dossier': 'Save to dossier',
+    'debrief.exit': 'Exit',
+    'end.title': 'Training complete',
+    'end.sub': 'The debrief is complete and the reports are available.<br>Start a new scenario or go back to the debrief.',
+    'end.new': '↺ New scenario',
+    'end.back': 'Back to debrief',
     'tab.opdracht': 'Assignment', 'tab.sop': 'SOP', 'tab.situatie': 'Situation', 'tab.procedure': 'Procedure',
     'opd.task': 'Task', 'opd.ppe': 'Required PPE',
     'sit.situation': 'Situation', 'sec.attention': 'Points of attention',
@@ -3910,6 +4087,8 @@ const I18N = {
     'err.voice': 'Voice error: ',
     'log.phase': 'Phase: {name}',
     'log.actionDone': 'Action completed: {label}',
+    'log.impCaught': '✓ Imperfection spotted: {label}',
+    'log.impFalse': '✗ Wrongly flagged as a problem: {label}',
   },
 };
 
@@ -4667,7 +4846,7 @@ function pickRadioCheckTexts(effL) {
       title:    'Radio check — microfoontest',
       intro:    'Voordat we beginnen, een korte microfoontest. <strong>Lees de zin hieronder hardop voor</strong> met je normale radiostem. Houd <kbd>Spatie</kbd> of de knop ingedrukt — laat los als je klaar bent.',
       label:    'Lees hardop voor',
-      sentence: 'Hier veldoperator. Ik sta bij de pomp, geen lekkage zichtbaar. Ik begin met mijn controleronde, over.',
+      sentence: 'Hier onderhoudstechnicus. Ik sta bij de pomp, de installatie is veiliggesteld. Ik begin met het vervangen van de flenspakking, over.',
       btnIdle:    'Houd vast om te spreken',
       btnRec:     'Loslaten als je klaar bent',
       btnProc:    'Verwerken…',
@@ -4688,7 +4867,7 @@ function pickRadioCheckTexts(effL) {
       title:    'Radio check — microphone test',
       intro:    'Before we begin, a quick microphone test. <strong>Read the line below out loud</strong> at your normal radio voice. Hold <kbd>Space</kbd> or the button — release when done.',
       label:    'Read aloud',
-      sentence: 'This is field operator. I\'m at the pump, no leakage visible. Starting my control round, over.',
+      sentence: 'This is maintenance technician. I\'m at the pump, the installation is isolated and made safe. Starting to replace the flange gasket, over.',
       btnIdle:    'Hold to speak',
       btnRec:     'Release when done',
       btnProc:    'Processing…',
@@ -4709,7 +4888,7 @@ function pickRadioCheckTexts(effL) {
       title:    'Funkprobe — Mikrofontest',
       intro:    'Bevor wir beginnen, eine kurze Mikrofonprüfung. <strong>Lesen Sie den Satz unten laut vor</strong> mit Ihrer normalen Funkstimme. Halten Sie <kbd>Leertaste</kbd> oder die Taste gedrückt — loslassen, wenn Sie fertig sind.',
       label:    'Vorlesen',
-      sentence: 'Hier Feldoperator. Ich bin an der Pumpe, keine Leckage sichtbar. Beginne meinen Kontrollgang, over.',
+      sentence: 'Hier Instandhaltungstechniker. Ich bin an der Pumpe, die Anlage ist freigeschaltet und gesichert. Beginne mit dem Austausch der Flanschdichtung, over.',
       btnIdle:    'Zum Sprechen halten',
       btnRec:     'Loslassen wenn fertig',
       btnProc:    'Verarbeite…',
@@ -4730,7 +4909,7 @@ function pickRadioCheckTexts(effL) {
       title:    'Prueba de radio — test de micrófono',
       intro:    'Antes de empezar, una breve prueba de micrófono. <strong>Lee la frase de abajo en voz alta</strong> con tu voz de radio normal. Mantén pulsada la tecla <kbd>Espacio</kbd> o el botón — suelta cuando termines.',
       label:    'Lee en voz alta',
-      sentence: 'Aquí operador de campo. Estoy junto a la bomba, sin fugas visibles. Inicio mi ronda de control, cambio.',
+      sentence: 'Aquí técnico de mantenimiento. Estoy junto a la bomba, la instalación está aislada y asegurada. Empiezo a sustituir la junta de la brida, cambio.',
       btnIdle:    'Mantén pulsado para hablar',
       btnRec:     'Suelta cuando termines',
       btnProc:    'Procesando…',
@@ -5276,6 +5455,42 @@ function stopVoicePttTimer() {
 }
 
 /* Update PTT-knop bij wijziging btn-send.disabled (vanuit callClaude) */
+// ─── Eenmalige coach-mark bij het waarneem-blok (idioom uit Field-player) ───
+// Verschijnt bij elke scenariostart (geen persistentie: in een training-
+// opstelling moet elke nieuwe deelnemer hem zien). Wijst het waarneem-blok aan
+// en legt uit dat de radio-tegenpartij het niet ziet — meld via radio.
+function showEnvCoachmark() {
+  const anchor = $('environment-text');
+  const cm = $('env-coachmark');
+  if (!anchor || !cm) return;
+  cm.classList.add('show');
+  anchor.classList.add('env-coach-highlight');
+  positionEnvCoachmark();
+}
+function positionEnvCoachmark() {
+  const anchor = $('environment-text');
+  const cm = $('env-coachmark');
+  if (!anchor || !cm || !cm.classList.contains('show')) return;
+  const r = anchor.getBoundingClientRect();
+  const top = r.bottom + 10;
+  let left = r.left + r.width / 2 - cm.offsetWidth / 2;
+  left = Math.max(12, Math.min(left, window.innerWidth - cm.offsetWidth - 12));
+  cm.style.top = top + 'px';
+  cm.style.left = left + 'px';
+  const arrow = cm.querySelector('.ecm-arrow');
+  if (arrow) {
+    const arrowLeft = (r.left + r.width / 2) - left;
+    arrow.style.left = Math.max(14, Math.min(arrowLeft, cm.offsetWidth - 28)) + 'px';
+  }
+}
+function dismissEnvCoachmark() {
+  const cm = $('env-coachmark');
+  const anchor = $('environment-text');
+  if (cm) cm.classList.remove('show');
+  if (anchor) anchor.classList.remove('env-coach-highlight');
+}
+window.addEventListener('resize', positionEnvCoachmark);
+
 function syncPttToSendButton() {
   const ptt = document.getElementById('ptt-btn');
   const send = document.getElementById('btn-send');
@@ -6387,6 +6602,40 @@ function buildSystemPrompt() {
 
   const lsrList = Object.entries(LIFE_SAVING_RULES).map(([k,v]) => `- ${k}: ${v}`).join('\n');
 
+  // Onvolkomenheden (questioning attitude voor permit-werk) — VERBORGEN voor de deelnemer.
+  const imps = Array.isArray(sc.workImperfections) ? sc.workImperfections : [];
+  const realImps = imps.filter(im => !im.isDistractor);
+  const distractorImps = imps.filter(im => im.isDistractor);
+  const impTargetLabel = (im) => {
+    if (im.target === 'permit') return 'werkvergunning';
+    if (im.target === 'isolation') {
+      const p = ((sc.isolationVerification && sc.isolationVerification.points) || []).find(x => x.id === im.targetRef);
+      return p ? `isolatiepunt "${p.label}"` : 'isolatiepunt';
+    }
+    const st = (sc.sop?.steps || []).find(s => s.id === im.targetRef);
+    return st ? `werktaak-stap [${st.id}] ${st.label}` : 'werktaak-stap';
+  };
+  const imperfectionsBlock = imps.length ? `
+═══════════════════════════════════════════════════════════
+INGEBOUWDE ONVOLKOMENHEDEN — VERBORGEN VOOR DEELNEMER
+═══════════════════════════════════════════════════════════
+Dit scenario test of de technische medewerker onvolkomenheden in de werktaak, werkvergunning of isolatie opmerkt en de PERMITDISCIPLINE toepast (vergunning/isolatie verifiëren tegen de werkelijkheid, STOPPEN bij een ontbrekende beheersmaatregel) — niet alleen of hij het werk netjes uitvoert. De onderstaande onvolkomenheden zitten er met OPZET in.
+
+ABSOLUTE REGELS:
+- Wijs de deelnemer hier NOOIT uit jezelf op. GEEN enkele rol (vergunningverstrekker, operatie, supervisor, instructeur) kaart het spontaan aan.
+- Alleen als de deelnemer ZELF twijfelt, de vergunning/isolatie/stap bevraagt, verifieert of weigert, mag de aangesproken rol kort en in-fictie bevestigen of ontkennen.
+- Zodra de deelnemer een specifieke onvolkomenheid daadwerkelijk aankaart, verifieert of weigert (volgens 'telt als opgemerkt'), stuur je in diezelfde beurt [ONVOLKOMENHEID-OPGEMERKT: <id>].
+${realImps.map(im => `
+- id ${im.id} | ${impTargetLabel(im)} | type ${im.type}${im.severity ? ' | ernst ' + im.severity : ''}
+  WAT DE DEELNEMER ZIET/LEEST: ${im.flawedText || '(de onvolkomenheid zit in het onderdeel zelf)'}
+  JUISTE SITUATIE: ${im.correctText || '(niet gespecificeerd)'}
+  GEVOLG BIJ NIET-OPMERKEN: ${im.consequence === 'feel' ? ('VOELBAAR — ' + (im.consequenceDescription || 'speel een merkbaar gevolg uit als de deelnemer toch doorgaat')) : 'STIL — geen direct gevolg; alleen voor de debrief'}
+  TELT ALS OPGEMERKT: ${im.detectionCriteria || 'de deelnemer kaart expliciet aan dat dit niet klopt of onveilig is en handelt ernaar'}`).join('\n')}
+${distractorImps.length ? `
+AFLEIDERS (lijken verdacht maar zijn CORRECT — de deelnemer hoort ze NIET als probleem te melden):${distractorImps.map(im => `
+- id ${im.id} | ${impTargetLabel(im)} | reden dat het tóch klopt: ${im.correctText || '(is correct)'}`).join('')}
+Als de deelnemer een afleider onterecht als probleem bestempelt: stuur [ONVOLKOMENHEID-VALS: <id>] en bevestig rustig in-fictie dat het wél klopt.` : ''}` : '';
+
   // Hold-points gegroepeerd per categorie
   const hpByCategory = { lsr: [], procedural: [], 'process-safety': [], environmental: [] };
   sc.holdPoints.forEach(hp => {
@@ -6679,7 +6928,7 @@ SCENARIO
 Titel: ${sc.title}
 Organisatie: ${sc.organization}
 Beschrijving: ${sc.description}
-Deelnemer: ${STATE.participantName}
+Deelnemer: ${STATE.participantName}${STATE.participantRole ? ` — functie: ${STATE.participantRole}` : ''}${STATE.participantOrg ? ` — organisatie: ${STATE.participantOrg}` : ''}
 ${isIncident ? '' : `\nSOP: ${sc.sop.title} (${sc.sop.reference})\n${sc.sop.summary}`}
 
 ═══════════════════════════════════════════════════════════
@@ -6750,6 +6999,7 @@ DETECTIE EN ACTIE:
 
 BEOORDELING VAN LIFE-SAVING RULES (ter info):
 ${lsrList}
+${imperfectionsBlock}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT-PROTOCOL
@@ -6767,6 +7017,8 @@ Beschikbare systeemtokens (op een aparte regel):
 [ACTIE-VOLTOOID: <action-id>]  — markeer een uitvoerings-actie of verwachte-actie als voltooid
 [AUDIO: <effect-name>]  — speel een geluidseffect af; één per beurt, alleen op betekenisvolle momenten
 [HOLD-POINT: <hp-id>]  — scenario stopt direct (gebruik deze voor ALLE hold-point categorieën)
+[ONVOLKOMENHEID-OPGEMERKT: <id>]  — deelnemer kaart een ingebouwde onvolkomenheid terecht aan (zie verborgen blok)
+[ONVOLKOMENHEID-VALS: <id>]  — deelnemer bestempelt een afleider (correct onderdeel) onterecht als probleem
 [SCENARIO-EINDE]  — scenario voltooid, ga naar debrief
 
 BESCHIKBARE AUDIO-EFFECTS (gebruik spaarzaam — alleen bij betekenisvolle gebeurtenissen):
@@ -6791,6 +7043,11 @@ DYNAMIEK EN REALISME
 - Eén rol per beurt is normaal. Meerdere rollen alleen als context het echt vraagt.
 - CRO is professioneel maar niet alwetend. Mag zelf vragen stellen, niet alles weten.
 - Als deelnemer een SOP-stap "verkeerd" doet maar geen hold-point raakt: CRO of collega MAG terloops iets opmerken, maar GRIJPT NIET IN. De fout blijft staan en wordt in debrief besproken.
+
+WAARNEMING IS LOKAAL — de radiorollen kijken NIET mee:
+- De radiorollen (zoals de vergunningverstrekker, installatieverantwoordelijke, operatie, supervisor of CRO) zitten elders en kunnen NIET zien, horen of ruiken wat de deelnemer ter plaatse waarneemt. De omgevingssignalen in het "Je neemt waar"-blok zijn UITSLUITEND voor de deelnemer. De radio weet alleen wat de deelnemer EXPLICIET meldt.
+- Reageer dus NOOIT uit jezelf op een omgevingssignaal dat de deelnemer nog niet heeft gerapporteerd (geen "ik zie ook dat..."), en doe nooit alsof een radiorol een waarneming ter plaatse al kent.
+- Als de deelnemer aanneemt dat de mensen aan de radio meekijken — bv. "zie je dat?", "jullie zien die restdruk toch", of handelt alsof de vergunningverstrekker/operatie de situatie ter plaatse al kent zonder het te melden — laat de aangesproken radiorol dat ÉÉN keer, kort en in-fictie corrigeren: maak duidelijk dat hij vanaf daar niets kan zien en vraag de deelnemer te beschrijven wat hij waarneemt (bv. "[ROL: Verg.verstrekker] Ik kan vanaf hier niets zien — beschrijf eens wat je daar precies waarneemt, over."). Geen college, geen herhaling, en verklap NOOIT het signaal of de juiste actie.
 
 ═══════════════════════════════════════════════════════════
 EXTRA INSTRUCTIES VOOR DIT SCENARIO
@@ -6994,6 +7251,12 @@ async function parseAndApplyAIResponse(reply) {
     playEffect(m[1]);
   }
 
+  // 4d. Onvolkomenheid-detectie (questioning attitude) — terecht opgemerkt / valse positieve
+  const impCaughtMatches = [...reply.matchAll(/\[ONVOLKOMENHEID-OPGEMERKT:\s*([a-zA-Z0-9_-]+)\s*\]/g)];
+  for (const m of impCaughtMatches) markWorkImperfection(m[1], 'caught');
+  const impFalseMatches = [...reply.matchAll(/\[ONVOLKOMENHEID-VALS:\s*([a-zA-Z0-9_-]+)\s*\]/g)];
+  for (const m of impFalseMatches) markWorkImperfection(m[1], 'false');
+
   // 5. Strip systeemtokens uit zichtbare tekst
   let cleanReply = reply
     .replace(/\[FASE:[^\]]+\]/g, '')
@@ -7002,6 +7265,8 @@ async function parseAndApplyAIResponse(reply) {
     .replace(/\[AUDIO:[^\]]+\]/g, '')
     .replace(/\[HOLD-POINT:[^\]]+\]/g, '')
     .replace(/\[LSR-OVERTREDING:[^\]]+\]/g, '')
+    .replace(/\[ONVOLKOMENHEID-OPGEMERKT:[^\]]+\]/g, '')
+    .replace(/\[ONVOLKOMENHEID-VALS:[^\]]+\]/g, '')
     .replace(/\[SCENARIO-EINDE\]/g, '')
     .trim();
 
@@ -7894,6 +8159,12 @@ function chooseScenario(id) {
   }
 
   $('input-name').placeholder = sc.participant.namePlaceholder;
+  // Voor-invullen met de (optionele) deelnemergegevens uit de controller.
+  // Leeg laten in de controller => deelnemer vult zelf in bij de start.
+  $('input-name').value = sc.participant.name || '';
+  $('input-role').value = sc.participant.role || '';
+  $('input-org').value  = sc.participant.org  || '';
+  onNameInput();
 
   // Optie 1 (CRO-identiek): de API-sleutel komt uit het scenario-JSON, ingebakken
   // door de scenariobouwer, zodat deelnemers hem niet zelf hoeven in te voeren.
@@ -7930,6 +8201,8 @@ function setLanguage(lang) {
 async function startScenario() {
   STATE.participantName = $('input-name').value.trim();
   if (!STATE.participantName) return;
+  STATE.participantRole = $('input-role').value.trim();
+  STATE.participantOrg  = $('input-org').value.trim();
 
   STATE.scenarioStartMs = Date.now();
   STATE.actionLog = [];
@@ -7938,8 +8211,11 @@ async function startScenario() {
   STATE.debriefData = null;
   STATE.debriefText = '';
   STATE.deviationReached = false;
+  STATE.imperfectionsCaught = {};
+  STATE.imperfectionsFalse = {};
   STATE.phasesVisited = [];
   STATE.firstActionTime = null;
+  STATE._runRecord = null;
   STATE.onsiteLmraDone = false;
   // v18: pauze-state opnieuw bij start (voor het geval scenario opnieuw start)
   STATE.isPaused = false;
@@ -7962,6 +8238,15 @@ async function startScenario() {
   renderTabs();
   renderTopBar();
   renderLeftPanel();
+  // Default-ontvanger op de eerste rol van dit scenario. Voorkomt dat het interne
+  // type 'dispatch' als ontvanger verschijnt wanneer geen enkele rol dat type heeft
+  // (bv. permit-werk met permit-issuer/area-authority).
+  const _roles0 = getScenario().roles || [];
+  if (_roles0.length) {
+    STATE.currentChannel = _roles0[0].type;
+    const _ccd = $('current-channel-display');
+    if (_ccd) _ccd.textContent = _roles0[0].name;
+  }
   renderChannelSelector();
   renderLocationDropdown();
   renderEnvironment();
@@ -7980,6 +8265,9 @@ async function startScenario() {
   const inp = $('input-text');
   if (inp) inp.value = '';
   syncPttToSendButton();
+
+  // Eenmalige uitleg dat alleen de deelnemer de omgevingssignalen waarneemt.
+  showEnvCoachmark();
 
   await callClaude(null);
 }
@@ -8305,6 +8593,23 @@ function markActionDone(actionId) {
   addSystemMessage(t('log.actionDone', { label: action.action || action.label }));
 }
 
+// Onvolkomenheid: AI markeert terechte detectie ('caught') of valse positieve ('false').
+function markWorkImperfection(impId, kind) {
+  const sc = getScenario();
+  const imp = (sc.workImperfections || []).find(i => i.id === impId);
+  if (!imp) { console.warn('ONVOLKOMENHEID-token voor onbekende id:', impId); return; }
+  const label = (imp.flawedText || imp.targetRef || impId).slice(0, 60);
+  if (kind === 'false') {
+    if (STATE.imperfectionsFalse[impId]) return;
+    STATE.imperfectionsFalse[impId] = Date.now() - STATE.scenarioStartMs;
+    addSystemMessage(t('log.impFalse', { label }));
+  } else {
+    if (STATE.imperfectionsCaught[impId]) return;
+    STATE.imperfectionsCaught[impId] = Date.now() - STATE.scenarioStartMs;
+    addSystemMessage(t('log.impCaught', { label }));
+  }
+}
+
 function triggerHoldPoint(hpId) {
   let hp = getScenario().holdPoints.find(h => h.id === hpId);
   if (!hp && hpId.startsWith('ad-hoc-')) {
@@ -8505,6 +8810,10 @@ async function goToDebrief(fromHoldPoint) {
     stopDebriefLoadingAnimation();
     renderFieldDebrief(debrief, fromHoldPoint);
 
+    // Run-registratie: bouw het canonieke run-record en cache het lokaal.
+    try { STATE._runRecord = buildRunRecord(); persistRunRecord(STATE._runRecord); }
+    catch (recErr) { console.warn('[OIP run-record] bouwen mislukt:', recErr); }
+
   } catch (e) {
     stopDebriefLoadingAnimation();
     const isAbort = e.name === 'AbortError';
@@ -8579,6 +8888,38 @@ function buildDebriefPrompt(fromHoldPoint) {
   }).join('\n') || '  (geen acties gedefinieerd)';
 
   let actionsBlock = `\n\nACTIE-OVERZICHT (${stats.done}/${stats.total} afgerond):\n${actionsList}`;
+
+  // Onvolkomenheden — questioning-attitude / permitdiscipline-beoordeling.
+  const allImps = Array.isArray(sc.workImperfections) ? sc.workImperfections : [];
+  if (allImps.length) {
+    const impTgtLbl = (im) => {
+      if (im.target === 'permit') return 'werkvergunning';
+      if (im.target === 'isolation') { const p = ((sc.isolationVerification && sc.isolationVerification.points) || []).find(x => x.id === im.targetRef); return p ? `isolatiepunt "${p.label}"` : 'isolatiepunt'; }
+      const st = (sc.sop?.steps || []).find(s => s.id === im.targetRef); return st ? `werktaak-stap [${st.id}] ${st.label}` : 'werktaak-stap';
+    };
+    const lines = allImps.map(im => {
+      const caught = STATE.imperfectionsCaught[im.id] !== undefined;
+      const falseFlag = STATE.imperfectionsFalse[im.id] !== undefined;
+      const t0 = caught ? STATE.imperfectionsCaught[im.id] : (falseFlag ? STATE.imperfectionsFalse[im.id] : null);
+      const tStr = t0 !== null ? ' (na ' + Math.floor(t0 / 1000) + 's)' : '';
+      const statusTxt = im.isDistractor
+        ? (falseFlag ? 'AFLEIDER — ONTERECHT als probleem aangemerkt' + tStr : 'AFLEIDER — correct NIET gemeld')
+        : (caught ? 'OPGEMERKT' + tStr : 'GEMIST');
+      return `  - id ${im.id} | ${impTgtLbl(im)} | type ${im.type}${im.isDistractor ? ' | AFLEIDER' : ''}
+    onvolkomenheid: ${im.flawedText || '(in het onderdeel zelf)'}
+    juiste situatie: ${im.correctText || '-'}
+    status deelnemer: ${statusTxt}`;
+    }).join('\n');
+    actionsBlock += `\n\nONVOLKOMENHEDEN (questioning attitude / permitdiscipline) — VERTROUWELIJK, voor jouw beoordeling:
+Dit scenario bevatte met OPZET onvolkomenheden in de werktaak, werkvergunning of isolatie. Hieronder per onvolkomenheid de waarheid + of de deelnemer hem oppikte.
+${lines}
+BEOORDELINGSREGELS:
+- Een OPGEMERKTE onvolkomenheid (zeker rond isolatie/vergunning) is een sterk positief signaal van permitdiscipline — benoem het en laat het de score positief beïnvloeden.
+- Een GEMISTE onvolkomenheid waar de deelnemer overheen werkte is een leerpunt; weeg de ernst mee (hoe veiligheidskritischer, hoe zwaarder).
+- Een AFLEIDER die ONTERECHT als probleem werd aangemerkt: benoem als nuance (te wantrouwig / onvoldoende onderbouwd), maar weeg lichter dan een echt gemiste onvolkomenheid.
+- Beoordeel de KWALITEIT van de detectie (begreep de deelnemer waaróm het niet klopte, of gokte hij?), niet alleen of hij iets riep.
+- Verwerk dit in de competentie 'Procedure-opvolging' (permitdiscipline) én in minstens één leerpunt, en vul het veld "procedureCritique" in het JSON-antwoord.`;
+  }
 
   // Expliciete context over de afwijking — bepalend voor hoe onafgeronde
   // uitvoeringsstappen beoordeeld moeten worden.
@@ -8673,7 +9014,7 @@ BEOORDELINGSREGEL:
 TRAININGSDATA
 Scenario: ${sc.title || 'onbekend'}
 Type: ${isPermitWork(sc) ? 'permit-werk (technische medewerker)' : isIncident ? 'incident-respons' : 'procedurele uitvoering'}
-Deelnemer: ${STATE.participantName || 'onbekend'}
+Deelnemer: ${STATE.participantName || 'onbekend'}${STATE.participantRole ? ` (functie: ${STATE.participantRole})` : ''}${STATE.participantOrg ? ` (organisatie: ${STATE.participantOrg})` : ''}
 Duur: ${getDurationStr()}
 Moeilijkheidsgraad: ${sc.difficulty || 3}/5${timingBlock}${holdBlock}${actionsBlock}
 
@@ -8726,6 +9067,9 @@ GEEF JE DEBRIEF UITSLUITEND ALS GELDIG JSON-OBJECT — geen tekst eromheen, geen
   },
   "learningPoints": [
     { "type": "<strong|improve|core>", "tag": "<label>", "text": "<specifieke observatie met tijdstempel of concreet moment>" }
+  ],
+  "procedureCritique": [
+    { "id": "<imp-id>", "label": "<korte omschrijving van de onvolkomenheid>", "detected": "<yes|no|partial|falsePositive>", "comment": "<wat de deelnemer deed; bij gemist het leerpunt>" }
   ]
 }
 
@@ -8737,6 +9081,7 @@ Competenties — gebruik PRECIES deze vier, in deze volgorde, vertaald naar de s
 communicationAssessment: kies 4-6 relevante aspecten (niet alle zeven verplicht). De aspect-scores moeten consistent zijn met de competentie-score "Communicatie".
 Tijdlijn: max 8 momenten — alleen wat werkelijk significant was.
 Leerpunten: 2-3 items, minimaal één "improve" of "core". Een debrief zonder verbeterpunt is geen debrief.
+procedureCritique: vul dit ALLEEN als er hierboven onvolkomenheden zijn vermeld; geef per onvolkomenheid één item (detected: yes/no/partial, of falsePositive voor een onterecht geflagde afleider). Zijn er geen onvolkomenheden, laat de array dan leeg ([]).
 
 KRITISCHE JSON-REGELS — de output MOET geldige JSON zijn:
 - Gebruik GEEN dubbele aanhalingstekens (") binnen string-waarden; gebruik enkele aanhalingstekens (') of geen.
@@ -8761,6 +9106,7 @@ function getDebriefUILabels() {
           noTimeline:'Geen tijdlijndata beschikbaar.', noComms:'Geen communicatie geregistreerd tijdens dit scenario.',
           noLearning:'Geen leerpunten beschikbaar.', participantWord:'Deelnemer',
           tagStrong:'Sterk punt', tagImprove:'Verbeterpunt', tagCore:'Kernpunt',
+          procedure:'Permitdiscipline & opmerkzaamheid', procDetected:'Opgemerkt', procPartial:'Deels', procFalse:'Vals alarm', procMissed:'Gemist',
           truncated:'Let op: de debrief is afgekapt vanwege lengte; sommige details kunnen incompleet zijn. Klik op Opnieuw proberen om te hergenereren.',
           holdWarn:'Het scenario is voortijdig gestopt door een hold-point. Deze debrief beoordeelt de uitvoering tot dat moment.' },
     de: { scenario:'Szenario', participant:'Teilnehmer', duration:'Dauer',
@@ -8771,6 +9117,7 @@ function getDebriefUILabels() {
           noTimeline:'Keine Zeitleistendaten verfügbar.', noComms:'Keine Kommunikation aufgezeichnet.',
           noLearning:'Keine Lernpunkte verfügbar.', participantWord:'Teilnehmer',
           tagStrong:'Stärke', tagImprove:'Verbesserung', tagCore:'Kernpunkt',
+          procedure:'Permit-Disziplin & Aufmerksamkeit', procDetected:'Bemerkt', procPartial:'Teilweise', procFalse:'Fehlalarm', procMissed:'Übersehen',
           truncated:'Hinweis: Die Auswertung wurde gekürzt; einige Details können unvollständig sein. Erneut versuchen.',
           holdWarn:'Das Szenario wurde durch einen Hold-Point vorzeitig gestoppt. Diese Auswertung bewertet die Ausführung bis zu diesem Punkt.' },
     en: { scenario:'Scenario', participant:'Participant', duration:'Duration',
@@ -8781,6 +9128,7 @@ function getDebriefUILabels() {
           noTimeline:'No timeline data available.', noComms:'No communication recorded during this scenario.',
           noLearning:'No learning points available.', participantWord:'Participant',
           tagStrong:'Strong point', tagImprove:'Improvement', tagCore:'Core point',
+          procedure:'Permit discipline & alertness', procDetected:'Spotted', procPartial:'Partial', procFalse:'False alarm', procMissed:'Missed',
           truncated:'Note: the debrief was cut off due to length; some details may be incomplete. Click Try again to regenerate.',
           holdWarn:'The scenario was stopped early by a hold-point. This debrief evaluates the execution up to that moment.' },
     es: { scenario:'Escenario', participant:'Participante', duration:'Duración',
@@ -8791,6 +9139,7 @@ function getDebriefUILabels() {
           noTimeline:'No hay datos de cronología disponibles.', noComms:'No se registró comunicación durante este escenario.',
           noLearning:'No hay puntos de aprendizaje disponibles.', participantWord:'Participante',
           tagStrong:'Punto fuerte', tagImprove:'Mejora', tagCore:'Punto clave',
+          procedure:'Disciplina de permisos y atención', procDetected:'Detectado', procPartial:'Parcial', procFalse:'Falsa alarma', procMissed:'Omitido',
           truncated:'Aviso: la evaluación se truncó por su longitud; algunos detalles pueden estar incompletos. Vuelva a intentarlo.',
           holdWarn:'El escenario se detuvo anticipadamente por un hold-point. Esta evaluación valora la ejecución hasta ese momento.' },
   };
@@ -8857,6 +9206,7 @@ function renderFieldDebrief(d, fromHoldPoint) {
           <div style="text-align:right">
             <div class="dbf-lbl">${L.participant}</div>
             <div id="dbf-participant-name">${escapeHtml(STATE.participantName || '—')}</div>
+            ${(STATE.participantRole || STATE.participantOrg) ? `<div id="dbf-participant-sub" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:2px">${escapeHtml([STATE.participantRole, STATE.participantOrg].filter(Boolean).join(' · '))}</div>` : ''}
           </div>
         </div>
         <div id="dbf-score-row">
@@ -8923,6 +9273,18 @@ function renderFieldDebrief(d, fromHoldPoint) {
       </div>`;
     }).join('') || `<div class="dbf-empty">${L.noLearning}</div>`;
 
+    // ── Permitdiscipline & opmerkzaamheid (questioning attitude) ──
+    const pc = Array.isArray(d.procedureCritique) ? d.procedureCritique : [];
+    const pcRows = pc.map(p => {
+      const det = ['yes','partial','falsePositive','no'].includes(p.detected) ? p.detected : 'no';
+      const detLbl = det === 'yes' ? L.procDetected : det === 'partial' ? L.procPartial : det === 'falsePositive' ? L.procFalse : L.procMissed;
+      const col = det === 'yes' ? '#2e7d32' : det === 'partial' ? '#e65100' : det === 'falsePositive' ? '#8e24aa' : '#c62828';
+      return `<div class="dbf-learn-item" style="border-left:3px solid ${col}">
+        <span class="dbf-learn-tag" style="background:${col}">${escapeHtml(detLbl)}</span>
+        <div class="dbf-learn-text">${escapeHtml(p.label || p.id || '')}${p.comment ? ' — ' + escapeHtml(p.comment) : ''}</div>
+      </div>`;
+    }).join('');
+
     const section = (key, icon, title, bodyHtml, count, openByDefault) => `
       <div class="dbf-section">
         <div class="dbf-sec-hdr" onclick="toggleDebriefSection('${key}')">
@@ -8946,7 +9308,8 @@ function renderFieldDebrief(d, fromHoldPoint) {
       section('analysis', '◈', L.analysis, `<div id="dbf-competency-grid">${compRows}</div>`, '', true) +
       section('comms', '📡', L.comms, `<div id="dbf-comms-container">${commsHtml}</div>`, '', true) +
       section('commlog', '🎙', L.commlog, `<div id="dbf-commlog">${commlogRows}</div>`, outCount ? outCount + '×' : '', false) +
-      section('learning', '→', L.learning, `<div id="dbf-learning-points">${lpRows}</div>`, lps.length || '', true);
+      section('learning', '→', L.learning, `<div id="dbf-learning-points">${lpRows}</div>`, lps.length || '', true) +
+      (pc.length ? section('procedure', '🔍', L.procedure, `<div id="dbf-procedure-critique">${pcRows}</div>`, pc.length, true) : '');
 
     // Animeer balken na render
     setTimeout(() => {
@@ -9266,7 +9629,7 @@ function getExportLabels() {
   const lang = STATE.communicationLanguage || 'nl';
   const L = {
     nl: {
-      title: 'Debrief — Veldscenario', participant: 'Deelnemer', scenario: 'Scenario',
+      title: 'Debrief — Technical scenario', participant: 'Deelnemer', scenario: 'Scenario',
       type: 'Type', date: 'Datum', duration: 'Duur', endReason: 'Afsluiting',
       typeProc: 'Procedurele uitvoering', typeInc: 'Incident-respons',
       completed: 'Voltooid', holdpoint: 'Gestopt door hold-point',
@@ -9275,14 +9638,14 @@ function getExportLabels() {
       actionsOverview: 'Acties — overzicht', reported: 'gerapporteerd', notDone: 'niet gerapporteerd',
       actionLog: 'Eigen actie-log', noLog: '(geen waarnemingen gelogd)',
       debrief: 'Evaluatie door Instructeur', holdInfo: 'Hold-point informatie',
-      footer: 'OIP Field Scenario · gegenereerd op',
+      footer: 'OIP Technical Scenario · gegenereerd op',
       excelHeaders: ['Datum','Deelnemer','Scenario','Type','Duur','Afsluiting','Hold-point reden','Normtijd / target','Binnen norm','Acties gedaan','Acties totaal','Debrief samenvatting'],
       filename: 'Debrief',
       disclaimerTitle: 'Over dit rapport',
       disclaimerBody: 'Dit rapport is gegenereerd met behulp van AI op basis van de uitvoering van het scenario. De evaluatie kan onvolledigheden of onnauwkeurigheden bevatten en vervangt geen oordeel van een gekwalificeerde trainer of supervisor. Gebruik het als reflectie-instrument om van de eigen uitvoering te leren — niet als formele beoordeling.',
     },
     de: {
-      title: 'Auswertung — Feldszenario', participant: 'Teilnehmer', scenario: 'Szenario',
+      title: 'Auswertung — Technical-Szenario', participant: 'Teilnehmer', scenario: 'Szenario',
       type: 'Typ', date: 'Datum', duration: 'Dauer', endReason: 'Abschluss',
       typeProc: 'Verfahrensausführung', typeInc: 'Vorfall-Reaktion',
       completed: 'Abgeschlossen', holdpoint: 'Durch Hold-Point gestoppt',
@@ -9291,14 +9654,14 @@ function getExportLabels() {
       actionsOverview: 'Aktionen — Übersicht', reported: 'gemeldet', notDone: 'nicht gemeldet',
       actionLog: 'Eigenes Aktionsprotokoll', noLog: '(keine Beobachtungen protokolliert)',
       debrief: 'Auswertung durch Instruktor', holdInfo: 'Hold-Point-Informationen',
-      footer: 'OIP Field Scenario · erstellt am',
+      footer: 'OIP Technical Scenario · erstellt am',
       excelHeaders: ['Datum','Teilnehmer','Szenario','Typ','Dauer','Abschluss','Hold-Point Grund','Normzeit / Ziel','Innerhalb Norm','Aktionen erledigt','Aktionen gesamt','Auswertungs-Zusammenfassung'],
       filename: 'Auswertung',
       disclaimerTitle: 'Über diesen Bericht',
       disclaimerBody: 'Dieser Bericht wurde mithilfe von KI auf Basis der Szenario-Ausführung erstellt. Die Auswertung kann Unvollständigkeiten oder Ungenauigkeiten enthalten und ersetzt nicht das Urteil eines qualifizierten Trainers oder Supervisors. Verwenden Sie ihn als Reflexionsinstrument, um aus der eigenen Ausführung zu lernen — nicht als formelle Bewertung.',
     },
     en: {
-      title: 'Debrief — Field Scenario', participant: 'Participant', scenario: 'Scenario',
+      title: 'Debrief — Technical Scenario', participant: 'Participant', scenario: 'Scenario',
       type: 'Type', date: 'Date', duration: 'Duration', endReason: 'Outcome',
       typeProc: 'Procedural execution', typeInc: 'Incident response',
       completed: 'Completed', holdpoint: 'Stopped by hold-point',
@@ -9307,14 +9670,14 @@ function getExportLabels() {
       actionsOverview: 'Actions — overview', reported: 'reported', notDone: 'not reported',
       actionLog: 'Own action log', noLog: '(no observations logged)',
       debrief: 'Evaluation by Instructor', holdInfo: 'Hold-point information',
-      footer: 'OIP Field Scenario · generated on',
+      footer: 'OIP Technical Scenario · generated on',
       excelHeaders: ['Date','Participant','Scenario','Type','Duration','Outcome','Hold-point reason','Norm time / target','Within norm','Actions done','Actions total','Debrief summary'],
       filename: 'Debrief',
       disclaimerTitle: 'About this report',
       disclaimerBody: 'This report was generated with the help of AI based on the scenario execution. The evaluation may contain incompleteness or inaccuracies and does not replace the judgement of a qualified trainer or supervisor. Use it as a reflection tool to learn from your own performance — not as a formal assessment.',
     },
     es: {
-      title: 'Evaluación — Escenario de campo', participant: 'Participante', scenario: 'Escenario',
+      title: 'Evaluación — Escenario Technical', participant: 'Participante', scenario: 'Escenario',
       type: 'Tipo', date: 'Fecha', duration: 'Duración', endReason: 'Resultado',
       typeProc: 'Ejecución de procedimiento', typeInc: 'Respuesta a incidente',
       completed: 'Completado', holdpoint: 'Detenido por hold-point',
@@ -9323,7 +9686,7 @@ function getExportLabels() {
       actionsOverview: 'Acciones — resumen', reported: 'reportado', notDone: 'no reportado',
       actionLog: 'Registro de acciones propio', noLog: '(no se registraron observaciones)',
       debrief: 'Evaluación del Instructor', holdInfo: 'Información del hold-point',
-      footer: 'OIP Field Scenario · generado el',
+      footer: 'OIP Technical Scenario · generado el',
       excelHeaders: ['Fecha','Participante','Escenario','Tipo','Duración','Resultado','Motivo hold-point','Tiempo norma / objetivo','Dentro de norma','Acciones hechas','Acciones total','Resumen evaluación'],
       filename: 'Evaluacion',
       disclaimerTitle: 'Acerca de este informe',
@@ -9374,6 +9737,7 @@ function buildDebriefHTML() {
           commlog:'Communicatie-registratie', speaker:'Spreker', message:'Bericht',
           assessment:'Eindoordeel', summary:'Samenvatting', noData:'—',
           tagStrong:'Sterk punt', tagImprove:'Verbeterpunt', tagCore:'Kernpunt',
+          procedure:'Permitdiscipline & opmerkzaamheid', procDetected:'Opgemerkt', procPartial:'Deels', procFalse:'Vals alarm', procMissed:'Gemist',
           noComms:'Geen communicatie geregistreerd tijdens dit scenario.' },
     de: { behaviour:'Verhaltensanalyse', competency:'Kompetenz', score:'Score', feedback:'Feedback',
           timeline:'Zeitleiste', time:'Zeit', event:'Ereignis', desc:'Beschreibung',
@@ -9382,6 +9746,7 @@ function buildDebriefHTML() {
           commlog:'Kommunikationsprotokoll', speaker:'Sprecher', message:'Nachricht',
           assessment:'Gesamturteil', summary:'Zusammenfassung', noData:'—',
           tagStrong:'Stärke', tagImprove:'Verbesserung', tagCore:'Kernpunkt',
+          procedure:'Permit-Disziplin & Aufmerksamkeit', procDetected:'Bemerkt', procPartial:'Teilweise', procFalse:'Fehlalarm', procMissed:'Übersehen',
           noComms:'Keine Kommunikation aufgezeichnet.' },
     en: { behaviour:'Behaviour analysis', competency:'Competency', score:'Score', feedback:'Feedback',
           timeline:'Timeline', time:'Time', event:'Event', desc:'Description',
@@ -9390,6 +9755,7 @@ function buildDebriefHTML() {
           commlog:'Communication log', speaker:'Speaker', message:'Message',
           assessment:'Overall assessment', summary:'Summary', noData:'—',
           tagStrong:'Strong point', tagImprove:'Improvement', tagCore:'Core point',
+          procedure:'Permit discipline & alertness', procDetected:'Spotted', procPartial:'Partial', procFalse:'False alarm', procMissed:'Missed',
           noComms:'No communication recorded during this scenario.' },
     es: { behaviour:'Análisis de comportamiento', competency:'Competencia', score:'Puntuación', feedback:'Feedback',
           timeline:'Cronología', time:'Tiempo', event:'Evento', desc:'Descripción',
@@ -9398,6 +9764,7 @@ function buildDebriefHTML() {
           commlog:'Registro de comunicación', speaker:'Interlocutor', message:'Mensaje',
           assessment:'Valoración general', summary:'Resumen', noData:'—',
           tagStrong:'Punto fuerte', tagImprove:'Mejora', tagCore:'Punto clave',
+          procedure:'Disciplina de permisos y atención', procDetected:'Detectado', procPartial:'Parcial', procFalse:'Falsa alarma', procMissed:'Omitido',
           noComms:'No se registró comunicación durante este escenario.' },
   })[lang] || null;
   const DL = D || ({ behaviour:'Gedragsanalyse', competency:'Competentie', score:'Score', feedback:'Feedback',
@@ -9407,6 +9774,7 @@ function buildDebriefHTML() {
           commlog:'Communicatie-registratie', speaker:'Spreker', message:'Bericht',
           assessment:'Eindoordeel', summary:'Samenvatting', noData:'—',
           tagStrong:'Sterk punt', tagImprove:'Verbeterpunt', tagCore:'Kernpunt',
+          procedure:'Permitdiscipline & opmerkzaamheid', procDetected:'Opgemerkt', procPartial:'Deels', procFalse:'Vals alarm', procMissed:'Gemist',
           noComms:'Geen communicatie geregistreerd tijdens dit scenario.' });
 
   // Outcome / hold-point info
@@ -9481,7 +9849,7 @@ function buildDebriefHTML() {
   ).join('');
 
   // ── Gestructureerde debrief-blokken (uit STATE.debriefData) ──
-  let behaviourBlock = '', timelineBlock = '', commsBlock = '', learningBlock = '';
+  let behaviourBlock = '', timelineBlock = '', commsBlock = '', learningBlock = '', procedureBlock = '';
 
   if (d) {
     const bl = behaviourLabelFor(d.score);
@@ -9605,6 +9973,19 @@ function buildDebriefHTML() {
       }).join('');
       learningBlock = `<h3>${DL.learning}</h3><ul style="padding-left:16px">${lpItems}</ul>`;
     }
+
+    // Permitdiscipline & opmerkzaamheid (questioning attitude)
+    const pc = Array.isArray(d.procedureCritique) ? d.procedureCritique : [];
+    if (pc.length) {
+      const badge = (det) => {
+        const map = { yes:['#2e7d32', DL.procDetected], partial:['#e65100', DL.procPartial], falsePositive:['#8e24aa', DL.procFalse], no:['#c62828', DL.procMissed] };
+        const key = ['yes','partial','falsePositive','no'].includes(det) ? det : 'no';
+        const cl = map[key];
+        return `<span style="background:${cl[0]};color:#fff;padding:1px 7px;border-radius:3px;font-size:11px">${escapeHtml(cl[1])}</span>`;
+      };
+      const rows = pc.map(p => `<li style="margin-bottom:8px">${badge(p.detected)}<span style="color:#333;font-size:13px;margin-left:6px">${escapeHtml(p.label || p.id || '')}${p.comment ? ' — ' + escapeHtml(p.comment) : ''}</span></li>`).join('');
+      procedureBlock = `<h3>${DL.procedure}</h3><ul style="padding-left:16px;list-style:none;margin:0">${rows}</ul>`;
+    }
   }
 
   // ── Communicatie-registratie (gesprekslog) ──
@@ -9675,7 +10056,7 @@ function buildDebriefHTML() {
 </div>
 
 <table class="meta-table">
-  <tr><td><strong>${L.participant}</strong></td><td>${escapeHtml(STATE.participantName || '—')}</td></tr>
+  <tr><td><strong>${L.participant}</strong></td><td>${escapeHtml(STATE.participantName || '—')}${(STATE.participantRole||STATE.participantOrg) ? ' — ' + escapeHtml([STATE.participantRole, STATE.participantOrg].filter(Boolean).join(', ')) : ''}</td></tr>
   <tr><td><strong>${L.scenario}</strong></td><td>${escapeHtml(sc.title || '')} <code>${sc.id || ''}</code></td></tr>
   <tr><td><strong>${L.type}</strong></td><td>${isIncident ? L.typeInc : L.typeProc}</td></tr>
   <tr><td><strong>${L.date}</strong></td><td>${dateLong}</td></tr>
@@ -9697,6 +10078,7 @@ ${isIncident && logRows ? `<h3>${L.actionLog}</h3><table>${logRows}</table>` : '
 ${isIncident && !logRows ? `<h3>${L.actionLog}</h3><p style="color:#888;font-style:italic">${L.noLog}</p>` : ''}
 
 ${learningBlock}
+${procedureBlock}
 ${commlogBlock}
 ${fallbackBlock}
 
@@ -9713,6 +10095,184 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+/* ───── EXIT / sessie-afsluiting (idioom uit CRO-player) ───── */
+function confirmExitSession() {
+  const title = document.getElementById('end-title');
+  const sub   = document.getElementById('end-sub');
+  const btnNew = document.getElementById('btn-new-session');
+  const btnBack = document.getElementById('btn-back-debrief');
+  if (title)  title.textContent = t('end.title');
+  if (sub)    sub.innerHTML     = t('end.sub');
+  if (btnNew) btnNew.textContent = t('end.new');
+  if (btnBack) btnBack.textContent = t('end.back');
+  document.getElementById('session-end-overlay').classList.add('visible');
+}
+
+function closeExitOverlay() {
+  document.getElementById('session-end-overlay').classList.remove('visible');
+}
+
+/* ───── 11x. RUN-REGISTRATIE — canoniek run-record (livescenario-run v1) ─────
+   Bouwt per voltooide run een variant-overstijgend record uit STATE +
+   debriefData, cachet het lokaal (localStorage 'oip_run_records') en biedt
+   download als .lsrun.json. Eén schema voor CRO/Field/Technical; de
+   Bekwaamheidsdossier-app aggregeert deze records (zie
+   implementatieplan/run-registratie-implementatieplan.md).
+─────────────────────────────────────────────────────────────────── */
+const RUNREC_FORMAT = 'livescenario-run';
+const RUNREC_VERSION = 1;
+const RUNREC_VARIANT = 'technical';
+const RUNREC_APP = 'Technical_Player_v1a';
+const RUNREC_STORE_KEY = 'oip_run_records';
+
+function _runId() {
+  const r = Math.floor(Math.random() * 1e4).toString().padStart(4, '0');
+  return `${RUNREC_VARIANT}-${Date.now()}-${r}`;
+}
+
+function buildRunRecord() {
+  const sc = getScenario() || {};
+  const d = STATE.debriefData || null;
+  const isIncident = sc.scenarioType === 'incident';
+  const startMs = STATE.scenarioStartMs || 0;
+  const endMs = STATE.scenarioEndMs || Date.now();
+  const durationSec = Math.max(0, Math.round((endMs - startMs) / 1000));
+  const stats = getActionsStats();
+
+  // Permitdiscipline / questioning-attitude: onvolkomenheden (afleiders niet in totaal)
+  const allImps = Array.isArray(sc.workImperfections) ? sc.workImperfections : [];
+  const realImps = allImps.filter(i => !i.isDistractor);
+
+  // WP2 — prioritering (must/should/could) op de incident-expectedActions.
+  let prioritisation = null;
+  if (isIncident) {
+    prioritisation = { must:{done:0,total:0}, should:{done:0,total:0}, could:{done:0,total:0} };
+    (stats.list || []).forEach(a => {
+      const pr = ['must','should','could'].includes(a.priority) ? a.priority : 'should';
+      prioritisation[pr].total++;
+      if (STATE.assignmentChecked[a.id]) prioritisation[pr].done++;
+    });
+  }
+  // WP2 — LMRA-discipline + signaalinterpretatie (uit de debrief-procedureCritique).
+  const _lmraTotal = ((sc.workPermit && sc.workPermit.lmraQuestions) || []).length;
+  const _pc = (d && Array.isArray(d.procedureCritique)) ? d.procedureCritique : [];
+
+  // Timing / norm — afgeleid uit de werkelijke duur (niet de live klok)
+  const norm = sc.normTime || 0;
+  let normTimeSec = null, withinNorm = null;
+  if (norm > 0) { normTimeSec = norm; withinNorm = durationSec <= norm; }
+  else if (isIncident && sc.timeToFirstActionTarget) {
+    normTimeSec = sc.timeToFirstActionTarget;
+    withinNorm = STATE.firstActionTime !== null
+      ? Math.floor(STATE.firstActionTime / 1000) <= sc.timeToFirstActionTarget : false;
+  }
+
+  const isHoldPoint = STATE.endReason !== 'completed' && !!STATE.endHoldPoint;
+  const hp = STATE.endHoldPoint;
+  const bl = d ? behaviourLabelFor(d.score) : null;
+  const score = (d && typeof d.score === 'number') ? Math.max(1, Math.min(10, Math.round(d.score))) : null;
+  const commScore = (d && d.communicationAssessment && typeof d.communicationAssessment.score === 'number')
+    ? Math.max(1, Math.min(10, Math.round(d.communicationAssessment.score))) : null;
+  const toIso = ms => ms ? new Date(ms).toISOString() : null;
+
+  return {
+    recordFormat: RUNREC_FORMAT,
+    recordVersion: RUNREC_VERSION,
+    runId: _runId(),
+    completedAt: new Date().toISOString(),
+    variant: RUNREC_VARIANT,
+    appVersion: RUNREC_APP,
+    participant: {
+      name: STATE.participantName || '',
+      role: STATE.participantRole || '',
+      org: STATE.participantOrg || ''
+    },
+    language: STATE.communicationLanguage || 'nl',
+    scenario: {
+      id: sc.id || '',
+      title: sc.title || '',
+      type: sc.scenarioType || '',
+      difficulty: sc.difficulty || null,
+      schemaVersion: sc.schemaVersion || null
+    },
+    run: {
+      startedAt: toIso(startMs),
+      endedAt: toIso(endMs),
+      durationSec,
+      endReason: STATE.endReason || 'completed',
+      holdPoint: (isHoldPoint && hp) ? { id: hp.id || '', category: hp.category || '', lsr: hp.lsr || '' } : null,
+      firstActionSec: STATE.firstActionTime !== null ? Math.floor(STATE.firstActionTime / 1000) : null,
+      normTimeSec, withinNorm,
+      outgoingMsgCount: (STATE.commLog || []).filter(e => e.dir === 'out').length
+    },
+    metrics: {
+      actionsDone: stats.done,
+      actionsTotal: stats.total,
+      prioritisation,
+      imperfectionsCaught: Object.keys(STATE.imperfectionsCaught || {}).length,
+      imperfectionsTotal: realImps.length,
+      imperfectionsFalse: Object.keys(STATE.imperfectionsFalse || {}).length,
+      imperfectionsInterpreted: _pc.filter(p => p.detected === 'yes').length,
+      imperfectionsPartial: _pc.filter(p => p.detected === 'partial').length,
+      lmra: { completed: !!STATE.lmraCompleted, answered: STATE.lmraAnsweredCount || 0, total: _lmraTotal },
+      lmraCompleted: !!STATE.lmraCompleted,
+      permitChecked: !!STATE.permitChecked,
+      isolationCheckDone: !!STATE.isolationCheckDone,
+      alarms: null
+    },
+    assessment: d ? {
+      score,
+      behaviourLabel: bl ? bl.key : null,
+      summary: d.summary || '',
+      competencies: Array.isArray(d.competencies) ? d.competencies.map(c => ({
+        name: c.name || '', score: (typeof c.score === 'number' ? c.score : null), feedback: c.feedback || ''
+      })) : [],
+      communicationScore: commScore,
+      procedureCritique: Array.isArray(d.procedureCritique) ? d.procedureCritique.map(p => ({
+        id: p.id || '', label: p.label || '', detected: p.detected || '', comment: p.comment || ''
+      })) : [],
+      learningPoints: Array.isArray(d.learningPoints) ? d.learningPoints.map(p => ({
+        type: p.type || '', tag: p.tag || '', text: p.text || ''
+      })) : []
+    } : null,
+    integrity: { generator: RUNREC_APP, hash: null }
+  };
+}
+
+function persistRunRecord(rec) {
+  try {
+    const raw = localStorage.getItem(RUNREC_STORE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!arr.some(r => r && r.runId === rec.runId)) arr.push(rec);
+    while (arr.length > 200) arr.shift();   // cap zodat localStorage niet volloopt
+    localStorage.setItem(RUNREC_STORE_KEY, JSON.stringify(arr));
+    return true;
+  } catch (e) {
+    console.warn('[OIP run-record] kon niet lokaal opslaan:', e);
+    return false;
+  }
+}
+
+function downloadRunRecord() {
+  const rec = STATE._runRecord || buildRunRecord();
+  STATE._runRecord = rec;
+  try {
+    const blob = new Blob([JSON.stringify(rec, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (STATE.participantName || 'deelnemer').replace(/\s+/g, '_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${safeName}_${RUNREC_VARIANT}_${dateStr}.lsrun.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) {
+    alert('Het run-record kon niet worden gedownload: ' + (e.message || e));
+  }
 }
 
 function exportDebriefPDF() {
