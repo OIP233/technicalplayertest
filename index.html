@@ -3022,6 +3022,9 @@ input, textarea {
     <button class="debrief-action-btn" id="btn-export-dossier" onclick="downloadRunRecord()">
       <span class="ico">🗂</span> <span data-i18n="debrief.dossier">Bewaar in dossier</span>
     </button>
+    <button class="debrief-action-btn" id="btn-run-history" onclick="openRunHistory()">
+      <span class="ico">📂</span> <span data-i18n="debrief.history">Runs op deze machine</span>
+    </button>
     <button class="debrief-action-btn" id="btn-exit-session" onclick="confirmExitSession()">
       <span class="ico">✕</span> <span data-i18n="debrief.exit">Afsluiten</span>
     </button>
@@ -3966,6 +3969,7 @@ const I18N = {
     'debrief.pdf': 'PDF-rapport',
     'debrief.xlsx': 'Excel-rij',
     'debrief.dossier': 'Bewaar in dossier',
+    'debrief.history': 'Runs op deze machine',
     'debrief.exit': 'Afsluiten',
     'end.title': 'Training afgerond',
     'end.sub': 'De debrief is klaar en de rapporten zijn beschikbaar.<br>Start een nieuw scenario of ga terug naar de debrief.',
@@ -4063,6 +4067,7 @@ const I18N = {
     'debrief.pdf': 'PDF report',
     'debrief.xlsx': 'Excel row',
     'debrief.dossier': 'Save to dossier',
+    'debrief.history': 'Runs on this device',
     'debrief.exit': 'Exit',
     'end.title': 'Training complete',
     'end.sub': 'The debrief is complete and the reports are available.<br>Start a new scenario or go back to the debrief.',
@@ -10275,33 +10280,94 @@ function downloadRunRecord() {
   }
 }
 
+/* ───── RUN-REGISTRATIE — lokale geschiedenis (deze machine) ─────
+   Beheer van de localStorage-cache 'oip_run_records': overzicht,
+   bundel-export (alle runs in één bestand) en wissen (AVG).
+   Identiek blok in alle drie de players. ─────────────────────── */
+function getStoredRunRecords() {
+  try { const a = JSON.parse(localStorage.getItem(RUNREC_STORE_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function _rhEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function _rhDate(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('nl-NL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
+function _rhDownload(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function exportAllRunRecords(){
+  const arr = getStoredRunRecords();
+  if (!arr.length){ alert('Geen runs in de lokale opslag van deze machine.'); return; }
+  const bundle = { recordFormat:'livescenario-run-bundle', recordVersion:1, exportedAt:new Date().toISOString(), count:arr.length, records:arr };
+  _rhDownload(bundle, `LiveScenario_runs_${new Date().toISOString().slice(0,10)}.lsrun.json`);
+}
+function clearRunRecords(){
+  const n = getStoredRunRecords().length;
+  if (!n){ alert('Geen runs om te wissen.'); return; }
+  if (!confirm(n + ' run-record(s) uit de lokale opslag van DEZE machine verwijderen?\nDit kan niet ongedaan worden gemaakt. Reeds geëxporteerde of in het dossier geïmporteerde bestanden blijven bestaan.')) return;
+  try { localStorage.removeItem(RUNREC_STORE_KEY); } catch(e){}
+  if (document.getElementById('run-history-overlay')) openRunHistory();   // ververs de lijst
+}
+function closeRunHistory(){ const ov = document.getElementById('run-history-overlay'); if (ov) ov.remove(); }
+function openRunHistory(){
+  const arr = getStoredRunRecords();
+  const old = document.getElementById('run-history-overlay'); if (old) old.remove();
+  const ov = document.createElement('div'); ov.id = 'run-history-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)';
+  const rows = arr.slice().reverse().map(r=>{
+    const p=r.participant||{}, sc=r.scenario||{}, a=r.assessment||{};
+    const score=(a&&typeof a.score==='number')?a.score+'/10':'—';
+    const bb='padding:6px 8px;border-bottom:1px solid var(--border,#3e5070)';
+    return `<tr><td style="${bb}">${_rhDate(r.completedAt)}</td><td style="${bb}">${_rhEsc(p.name||'—')}</td>`
+      +`<td style="${bb}">${_rhEsc(sc.title||sc.id||'—')}</td><td style="${bb};text-transform:capitalize">${_rhEsc(r.variant||'')}</td>`
+      +`<td style="${bb};text-align:right">${score}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="padding:18px;text-align:center;color:var(--text-muted,#60788e)">Nog geen runs op deze machine.</td></tr>';
+  const dis = arr.length ? '' : 'opacity:.4;cursor:not-allowed';
+  const btn = (label,fn,col)=>`<button onclick="${fn}" ${arr.length?'':'disabled'} style="background:var(--panel,#2e3a50);border:1px solid ${col};color:${col};border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;${dis}">${label}</button>`;
+  const th='padding:8px;border-bottom:1px solid var(--border,#3e5070)';
+  ov.innerHTML = `<div style="background:var(--panel-sub,#243044);border:1px solid var(--border,#3e5070);border-radius:12px;max-width:680px;width:92%;max-height:82vh;display:flex;flex-direction:column;font-family:var(--sans,-apple-system,sans-serif);color:var(--text,#e8f0f8);box-shadow:0 10px 40px rgba(0,0,0,.5)">`
+    +`<div style="padding:16px 20px;border-bottom:1px solid var(--border,#3e5070);display:flex;justify-content:space-between;align-items:center">`
+    +`<strong style="font-size:15px">Runs op deze machine (${arr.length})</strong>`
+    +`<button onclick="closeRunHistory()" style="background:none;border:none;color:var(--text-dim,#a0bacc);font-size:22px;line-height:1;cursor:pointer">✕</button></div>`
+    +`<div style="overflow:auto;flex:1"><table style="width:100%;border-collapse:collapse;font-size:12.5px;font-family:var(--mono,monospace)">`
+    +`<thead><tr style="color:var(--label,#b8d4e8);text-align:left"><th style="${th}">Datum</th><th style="${th}">Deelnemer</th><th style="${th}">Scenario</th><th style="${th}">Variant</th><th style="${th};text-align:right">Score</th></tr></thead>`
+    +`<tbody>${rows}</tbody></table></div>`
+    +`<div style="padding:14px 20px;border-top:1px solid var(--border,#3e5070);display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap">`
+    +`<span style="font-size:11px;color:var(--text-muted,#60788e);font-family:var(--mono,monospace);max-width:330px">Lokale cache van deze browser. Exporteer en importeer het bestand in het Bekwaamheidsdossier.</span>`
+    +`<span style="display:flex;gap:10px">${btn('📦 Exporteer alles','exportAllRunRecords()','var(--cyan,#00e8ff)')}${btn('🗑 Wis alles','clearRunRecords()','var(--red,#ff4438)')}</span></div></div>`;
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeRunHistory(); });
+  document.body.appendChild(ov);
+}
+
 function exportDebriefPDF() {
-  const html = buildDebriefHTML();
-
-  // Injecteer een auto-print script in de HTML zodat de print-dialog direct
-  // verschijnt zodra het nieuwe tabblad geladen is. De gebruiker kiest dan
-  // 'Save as PDF' (alle moderne browsers hebben dit standaard in print).
-  const autoPrintScript = `<script>
-    window.addEventListener('load', function() {
-      setTimeout(function() {
-        try { window.focus(); window.print(); } catch(e) {}
-      }, 350);
-    });
-    // Sluit het tabblad NIET automatisch na print — gebruiker wil mogelijk
-    // bekijken of nogmaals printen.
-  <\/script>`;
-  const finalHtml = html.replace('</body>', autoPrintScript + '</body>');
-
-  // Open in nieuw tabblad — gebeurt vanuit een directe gebruikersklik dus
-  // pop-up blockers staan dit standaard toe.
-  const win = window.open('', '_blank');
-  if (!win) {
-    alert('Pop-up geblokkeerd. Sta pop-ups toe voor deze pagina om het PDF-rapport te downloaden, of gebruik Ctrl+P in het tabblad dat verschijnt.');
-    return;
+  // Print via een VERBORGEN IFRAME i.p.v. een nieuw tabblad. Het oude
+  // window.open + auto-window.print() opende een popup die de focus stal en
+  // (op file://) de hoofdpagina blokkeerde — daardoor mislukte een dossier-
+  // download ná het PDF-rapport. Met een iframe blijft de hoofdpagina intact
+  // en is de volgorde (PDF vs. dossier) niet meer van belang.
+  try {
+    const html = buildDebriefHTML();
+    const old = document.getElementById('pdf-print-frame');
+    if (old) old.remove();
+    const f = document.createElement('iframe');
+    f.id = 'pdf-print-frame';
+    f.setAttribute('aria-hidden', 'true');
+    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;';
+    document.body.appendChild(f);
+    const doc = f.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    const go = () => {
+      try { f.contentWindow.focus(); f.contentWindow.print(); }
+      catch (e) { alert('Afdrukken kon niet worden gestart: ' + (e.message || e)); }
+    };
+    // Geef de layout (en eventuele afbeeldingen) even tijd vóór het printen.
+    if (doc.readyState === 'complete') setTimeout(go, 350);
+    else f.onload = () => setTimeout(go, 350);
+  } catch (e) {
+    alert('Het PDF-rapport kon niet worden voorbereid: ' + (e.message || e));
   }
-  win.document.open();
-  win.document.write(finalHtml);
-  win.document.close();
 }
 
 function exportDebriefExcel() {
