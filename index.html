@@ -2692,13 +2692,8 @@ input, textarea {
 <!-- ═══════════════════════════════════════════════════════════
      SCREEN: API key entry
      ═══════════════════════════════════════════════════════════ -->
-<div class="screen" id="screen-key">
-  <h1>OIP Field Scenario</h1>
-  <p class="sub" data-i18n="key.sub">Geen API-sleutel in het scenariobestand gevonden. Voer handmatig een Anthropic API-sleutel in om door te gaan.</p>
-  <input id="input-api-key" type="password" placeholder="sk-ant-..." autocomplete="off">
-  <div><button id="btn-confirm-key" data-i18n="key.continue">Doorgaan</button></div>
-  <p class="note" data-i18n="key.note">De sleutel wordt alleen in deze sessie gebruikt en gaat rechtstreeks naar de Anthropic API. Niet opgeslagen. Normaal zit de sleutel al in het scenario, ingebouwd door de scenariobouwer.</p>
-</div>
+<!-- SCREEN: API key entry — vervallen. Alle AI-calls lopen via AI_PROXY_URL
+     (Netlify-proxy, key server-side); er is geen handmatige sleutelinvoer meer. -->
 
 <!-- ═══════════════════════════════════════════════════════════
      SCREEN: Scenario-keuze
@@ -3776,7 +3771,6 @@ function normalizeScenario(sc) {
 
 /* ───── 3. RUNTIME STATE ───── */
 const STATE = {
-  apiKey: '',
   participantName: '',
   participantRole: '',
   participantOrg: '',
@@ -3824,6 +3818,48 @@ const STATE = {
    Overgenomen uit Live Scenario Player (CRO). Stuurt audio
    naar oip-voicecontrol.netlify.app voor transcriptie.
    ═══════════════════════════════════════════════════════════ */
+
+// ═══════════════════════════════════════════════════════════
+//  AI-PROXY — alle Anthropic-calls lopen via de Netlify-proxy,
+//  zodat de API-key niet in dit bestand of in de browser staat.
+//  De proxy voegt model + key server-side toe. Pas deze URL aan
+//  als de proxy onder een andere Netlify-sitenaam draait.
+// ═══════════════════════════════════════════════════════════
+const AI_PROXY_URL = 'https://livescenario-proxy.netlify.app/ai';
+
+// De debrief is een zware, langzame call (kan >60s duren) en past niet binnen één
+// synchrone serverless-call. Die loopt daarom via een achtergrond-wachtrij:
+// 'debrief-start' triggert een background worker, daarna pollen we 'debrief-result'.
+const AI_DEBRIEF_START  = 'https://livescenario-proxy.netlify.app/.netlify/functions/debrief-start';
+const AI_DEBRIEF_RESULT = 'https://livescenario-proxy.netlify.app/.netlify/functions/debrief-result';
+
+async function requestDebriefViaQueue(promptText) {
+  const jobId = 'dbf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+  const startRes = await fetch(AI_DEBRIEF_START, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId, max_tokens: 8192, messages: [{ role: 'user', content: promptText }] })
+  });
+  if (startRes.status !== 202 && !startRes.ok) {
+    let m = 'HTTP ' + startRes.status;
+    try { m = (await startRes.json()).error || m; } catch (e) {}
+    throw new Error('Kon debrief niet starten: ' + m);
+  }
+  const deadline = Date.now() + 175000; // ~175s pollen; de worker mag tot 15 min
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 3000));
+    let j;
+    try {
+      const pollRes = await fetch(AI_DEBRIEF_RESULT + '?id=' + encodeURIComponent(jobId));
+      if (!pollRes.ok) continue;
+      j = await pollRes.json();
+    } catch (e) { continue; }
+    if (j.status === 'done') return { text: j.text || '', stop_reason: j.stop_reason };
+    if (j.status === 'error') throw new Error(j.error || 'Debrief mislukt');
+    // 'pending' → blijf pollen
+  }
+  throw new Error('Time-out bij het voorbereiden van de debrief.');
+}
 
 const VOICE_CONFIG = {
   // Base-URL van de oip-voice-input Netlify site.
@@ -7176,16 +7212,10 @@ async function callClaude(userMessage) {
 
     const systemPrompt = buildSystemPrompt();
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(AI_PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': STATE.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         system: systemPrompt,
         messages: STATE.conversationHistory
@@ -7898,14 +7928,7 @@ function showTyping(on) {
 }
 
 /* ───── 11. EVENT HANDLERS ───── */
-function confirmApiKey() {
-  const k = $('input-api-key').value.trim();
-  if (!k) { alert('Vul een API-sleutel in.'); return; }
-  STATE.apiKey = k;
-  // Handmatige invoer is de terugval wanneer het scenario zelf geen sleutel
-  // meebrengt. Het scenario is op dit punt al gekozen, dus door naar de briefing.
-  show('screen-briefing');
-}
+/* (Handmatige API-sleutelinvoer vervallen: alle AI-calls lopen via AI_PROXY_URL.) */
 
 /* ───── 11a. CUSTOM SCENARIO LOADER (JSON-import) ───── */
 
@@ -8171,18 +8194,11 @@ function chooseScenario(id) {
   $('input-org').value  = sc.participant.org  || '';
   onNameInput();
 
-  // Optie 1 (CRO-identiek): de API-sleutel komt uit het scenario-JSON, ingebakken
-  // door de scenariobouwer, zodat deelnemers hem niet zelf hoeven in te voeren.
-  // Ontbreekt hij (bv. de ingebouwde demo-scenario's), dan tonen we het
-  // sleutelscherm als terugval. Tussenstap: de sleutel staat dan leesbaar in het
-  // bestand/de browser — echte afscherming volgt later via een server-side proxy.
-  const bakedKey = (typeof sc.apiKey === 'string') ? sc.apiKey.trim() : '';
-  if (bakedKey) {
-    STATE.apiKey = bakedKey;
-    show('screen-briefing');
-  } else {
-    show('screen-key');
-  }
+  // De API-key zit niet meer in het scenario of in de browser: alle AI-calls
+  // lopen via AI_PROXY_URL (key server-side via de Netlify-proxy). Een eventueel
+  // ingebakken sc.apiKey uit oudere scenario's wordt bewust genegeerd. Daarom
+  // geen sleutelscherm meer — direct door naar de briefing.
+  show('screen-briefing');
 }
 
 function onNameInput() {
@@ -8749,41 +8765,14 @@ async function goToDebrief(fromHoldPoint) {
   try {
     const debriefPrompt = buildDebriefPrompt(fromHoldPoint);
 
-    const controller = new AbortController();
-    // 120s: Sonnet 4.6 schrijft uitgebreider dan Sonnet 4 — een volledige
-    // debrief-JSON haalt de oude 45s-grens niet altijd meer.
-    const timeout = setTimeout(() => controller.abort(), 120000);
+    // De debrief gaat via de achtergrond-wachtrij (starten → pollen), zodat de
+    // lange generatie niet tegen de serverless-tijdslimiet aanloopt.
+    const debriefResult = await requestDebriefViaQueue(debriefPrompt);
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': STATE.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 8192,
-        messages: [{ role: 'user', content: debriefPrompt }]
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      let errMsg = `HTTP ${res.status}`;
-      try { errMsg = JSON.parse(errText).error?.message || errMsg; } catch (_) {}
-      throw new Error(errMsg);
-    }
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-
-    const raw = data.content?.[0]?.text || '';
+    const raw = debriefResult.text || '';
     if (!raw) throw new Error('Leeg antwoord van API');
 
-    const wasTruncated = data.stop_reason === 'max_tokens';
+    const wasTruncated = debriefResult.stop_reason === 'max_tokens';
     let clean = raw.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
     // Vangnet: knip eventuele inleidende/afsluitende tekst rond het JSON-object
     // weg. Bij truncatie ontbreekt de laatste '}' — dan alleen vanaf de eerste '{' knippen.
@@ -10479,8 +10468,7 @@ function exportDebriefExcel() {
 /* ───── 12. INIT ───── */
 window.addEventListener('DOMContentLoaded', () => {
   try { applyStaticI18n(); } catch (e) { console.warn('[i18n] initial applyStaticI18n failed:', e); }
-  $('btn-confirm-key').addEventListener('click', confirmApiKey);
-  $('input-api-key').addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmApiKey(); });
+  // (Geen sleutelscherm meer: AI-calls lopen via de proxy.)
   $('input-name').addEventListener('input', onNameInput);
   $('btn-start-scenario').addEventListener('click', startScenario);
   $('input-text').addEventListener('keydown', (e) => {
