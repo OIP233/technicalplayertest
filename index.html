@@ -3841,6 +3841,19 @@ function readAccessToken() {
   } catch (_) { return ''; }
 }
 const ACCESS_TOKEN = readAccessToken();
+function accessDeniedMessage(reason) {
+  switch (reason) {
+    case 'expired': return 'Deze toegang is verlopen. Vraag de organisator om een nieuwe deellink.\n(Access expired — please ask the organiser for a new link.)';
+    case 'variant_not_allowed': return 'Deze variant valt buiten jouw toegang. Neem contact op met de organisator.\n(This scenario type is not included in your access.)';
+    default: return 'Geen geldige toegang. Open de app via je persoonlijke deellink (met token), of neem contact op met de organisator.\n(No valid access — open the app via your personal share link.)';
+  }
+}
+async function aiProxyError(res) {
+  let reason = '', emsg = '';
+  try { const j = await res.json(); reason = j.reason || ''; emsg = (j.error && (j.error.message || j.error)) || j.error || ''; } catch (_) {}
+  if (res.status === 403) { const e = new Error(accessDeniedMessage(reason)); e.access = true; return e; }
+  return new Error('API ' + res.status + (emsg ? ': ' + emsg : ''));
+}
 function collectAudit() {
   let h;
   try { h = new URLSearchParams((location.hash || '').replace(/^#/, '')); } catch (_) { h = new URLSearchParams(); }
@@ -3868,6 +3881,7 @@ async function requestDebriefViaQueue(promptText) {
     body: JSON.stringify({ jobId, token: ACCESS_TOKEN, app: APP_ID, audit: collectAudit(), max_tokens: 8192, messages: [{ role: 'user', content: promptText }] })
   });
   if (startRes.status !== 202 && !startRes.ok) {
+    if (startRes.status === 403) throw await aiProxyError(startRes);
     let m = 'HTTP ' + startRes.status;
     try { m = (await startRes.json()).error || m; } catch (e) {}
     throw new Error('Kon debrief niet starten: ' + m);
@@ -7007,7 +7021,7 @@ ${rolesList}
 BELANGRIJK — naamgeving in communicatie:
 - Spreek scenario-rollen ALTIJD aan en verwijs naar ze met hun NAAM (bijvoorbeeld "${(sc.roles[0]||{}).name || 'CRO'}", "${(sc.roles[1]||{}).name || 'Karel'}", "${(sc.roles[2]||{}).name || 'Supervisor'}").
 - Gebruik NOOIT de interne type-aanduidingen (zoals "dispatch", "colleague", "supervisor", "external") in dialogen of in verwijzingen tussen rollen.
-- Voorbeeld correct:  "Ik bel de CRO even"   —   "Karel, kun jij...?"
+- Voorbeeld correct:  "Ik meld het even aan ${(sc.roles[0]||{}).name || 'de radiopost'}"   —   "${(sc.roles[1]||{}).name || 'Collega'}, kun jij...?"
 - Voorbeeld FOUT:     "Ik bel Dispatch"      —   "Colleague, kun jij...?"
 - Het type tussen haakjes hierboven is louter een interne categorie voor radio-gedrag en mag niet worden geuit.
 
@@ -7075,8 +7089,8 @@ OUTPUT-PROTOCOL
 Markeer ELKE spreker met de notatie: [ROL: <naam>] tekst
 
 Voorbeelden:
-[ROL: CRO] Bevestig je positie bij de pompopstelling, over.
-[ROL: Karel] Ja hoor, ik ben hier ook — alles ziet er normaal uit.
+[ROL: ${(sc.roles[0]||{}).name || 'Radiopost'}] Begrepen, ga je gang, over.
+[ROL: ${(sc.roles[1]||{}).name || 'Collega'}] Ja hoor, ik ben hier ook.
 [ROL: Instructeur] Wacht — wat ben je nu van plan?
 
 Beschikbare systeemtokens (op een aparte regel):
@@ -7109,8 +7123,8 @@ DYNAMIEK EN REALISME
 - Geen tip-machine. Laat deelnemer zelf denken, ook bij twijfel.
 - Stiltes/wachten zijn toegestaan — niet elke beurt moet alle rollen spreken.
 - Eén rol per beurt is normaal. Meerdere rollen alleen als context het echt vraagt.
-- CRO is professioneel maar niet alwetend. Mag zelf vragen stellen, niet alles weten.
-- Als deelnemer een SOP-stap "verkeerd" doet maar geen hold-point raakt: CRO of collega MAG terloops iets opmerken, maar GRIJPT NIET IN. De fout blijft staan en wordt in debrief besproken.
+- De radiorollen zijn professioneel maar niet alwetend. Mogen zelf vragen stellen, niet alles weten.
+- Als deelnemer een SOP-stap "verkeerd" doet maar geen hold-point raakt: een radiorol of collega MAG terloops iets opmerken, maar GRIJPT NIET IN. De fout blijft staan en wordt in debrief besproken.
 
 WAARNEMING IS LOKAAL — de radiorollen kijken NIET mee:
 - De radiorollen (zoals de vergunningverstrekker, installatieverantwoordelijke, operatie, supervisor of CRO) zitten elders en kunnen NIET zien, horen of ruiken wat de deelnemer ter plaatse waarneemt. De omgevingssignalen in het "Je neemt waar"-blok zijn UITSLUITEND voor de deelnemer. De radio weet alleen wat de deelnemer EXPLICIET meldt.
@@ -7250,10 +7264,7 @@ async function callClaude(userMessage) {
       })
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`API ${res.status}: ${errText}`);
-    }
+    if (!res.ok) throw await aiProxyError(res);
 
     const data = await res.json();
     const reply = data.content?.[0]?.text || '';
@@ -7264,7 +7275,7 @@ async function callClaude(userMessage) {
 
   } catch (e) {
     console.error('AI call error:', e);
-    addSystemMessage(t('err.aiCall') + e.message);
+    addSystemMessage(e.access ? e.message : t('err.aiCall') + e.message);
   } finally {
     showTyping(false);
     STATE.isProcessing = false;
@@ -7352,7 +7363,9 @@ async function parseAndApplyAIResponse(reply) {
     if (text) segments.push({ role: lastRole, text });
   }
   if (segments.length === 0 && cleanReply.trim()) {
-    segments.push({ role: 'CRO', text: cleanReply.trim() });
+    // Geen expliciet [ROL:]-label → schrijf het bericht toe aan de rol die de
+    // deelnemer nu aanspreekt (niet hardcoded 'CRO' — die rol bestaat niet in elk scenario).
+    segments.push({ role: getCurrentChannelRoleName(), text: cleanReply.trim() });
   }
 
   // Sequentieel: wacht op typewriter van vorige bericht voor volgende start
@@ -8719,7 +8732,8 @@ function triggerHoldPoint(hpId) {
 // hoeft te noemen — alleen de scenario-naam (bv. 'CRO').
 function getCurrentChannelRoleName() {
   const sc = getScenario();
-  const role = (sc.roles || []).find(r => r.type === STATE.currentChannel);
+  const roles = sc.roles || [];
+  const role = roles.find(r => r.type === STATE.currentChannel) || roles[0];
   return role ? role.name : STATE.currentChannel;
 }
 
