@@ -3854,6 +3854,9 @@ async function aiProxyError(res) {
   if (res.status === 403) { const e = new Error(accessDeniedMessage(reason)); e.access = true; return e; }
   return new Error('API ' + res.status + (emsg ? ': ' + emsg : ''));
 }
+function hashParticipant(key) {
+  try { return new URLSearchParams((location.hash || '').replace(/^#/, '')).get(key) || ''; } catch (_) { return ''; }
+}
 function collectAudit() {
   let h;
   try { h = new URLSearchParams((location.hash || '').replace(/^#/, '')); } catch (_) { h = new URLSearchParams(); }
@@ -8230,8 +8233,10 @@ function chooseScenario(id) {
   $('input-name').placeholder = sc.participant.namePlaceholder;
   // Voor-invullen met de (optionele) deelnemergegevens uit de controller.
   // Leeg laten in de controller => deelnemer vult zelf in bij de start.
-  $('input-name').value = sc.participant.name || '';
-  $('input-role').value = sc.participant.role || '';
+  // Deelnemerpagina-gegevens (uit de #hash) hebben voorrang op de in het
+  // scenario voor-ingevulde naam/functie; anders die uit het scenario.
+  $('input-name').value = hashParticipant('naam') || sc.participant.name || '';
+  $('input-role').value = hashParticipant('functie') || sc.participant.role || '';
   $('input-org').value  = sc.participant.org  || '';
   onNameInput();
 
