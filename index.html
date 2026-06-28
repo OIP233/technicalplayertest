@@ -3870,6 +3870,29 @@ function collectAudit() {
   };
 }
 
+// LICHT deelnamebewijs: pas NA de debrief (score + gedragslabel bekend) schrijft
+// de player een mager auditrecord weg via de proxy. Geen debrief-tekst centraal
+// (AVG) — alleen wie/wanneer/scenario/variant + score + label. org/variant leidt
+// de server zelf af uit het token. keepalive zodat een snel gesloten tabblad het
+// record nog wegkrijgt.
+const AI_AUDIT_WRITE = 'https://livescenario-proxy.netlify.app/.netlify/functions/audit-write';
+function writeAuditRecord(runRec) {
+  try {
+    if (!ACCESS_TOKEN) return; // zonder token weigert de proxy toch
+    const a = (runRec && runRec.assessment) || {};
+    const aud = collectAudit();
+    const body = JSON.stringify({
+      token: ACCESS_TOKEN, app: APP_ID,
+      naam: aud.naam, functie: aud.functie, scenario: aud.scenario,
+      score: (a.score != null ? a.score : null),
+      behaviourLabel: a.behaviourLabel || null,
+      completedAt: (runRec && runRec.completedAt) || null,
+      runId: (runRec && runRec.runId) || null,
+    });
+    fetch(AI_AUDIT_WRITE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(function () {});
+  } catch (_) { /* audit mag de player nooit breken */ }
+}
+
 // De debrief is een zware, langzame call (kan >60s duren) en past niet binnen één
 // synchrone serverless-call. Die loopt daarom via een achtergrond-wachtrij:
 // 'debrief-start' triggert een background worker, daarna pollen we 'debrief-result'.
@@ -8852,7 +8875,10 @@ async function goToDebrief(fromHoldPoint) {
     renderFieldDebrief(debrief, fromHoldPoint);
 
     // Run-registratie: bouw het canonieke run-record en cache het lokaal.
-    try { STATE._runRecord = buildRunRecord(); persistRunRecord(STATE._runRecord); }
+    try {
+      STATE._runRecord = buildRunRecord(); persistRunRecord(STATE._runRecord);
+      writeAuditRecord(STATE._runRecord); // licht deelnamebewijs naar de proxy (org-monitor)
+    }
     catch (recErr) { console.warn('[OIP run-record] bouwen mislukt:', recErr); }
 
   } catch (e) {
