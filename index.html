@@ -8647,6 +8647,17 @@ function getPhaseLocationId(phase) {
   if (phase === 'secure' && sc.assignment?.secureLocationId) {
     return sc.assignment.secureLocationId;
   }
+  // v1b: permit-werk kent geen 'secure' maar een 'handback'-fase, waarop de
+  // secure-override hierboven dus niet aanslaat. Die fase loopt in de praktijk
+  // vaak over twee plekken: werkgebied opruimen op de werkplek, daarna afmelden
+  // op de vergunningenpost. Anders dan bij de uitvoeringsfase is er geen
+  // actielijst om de locatie per stap aan op te hangen (handback kent alleen
+  // handbackAdvice), dus kiest de auteur met handbackLocationId expliciet waar
+  // de handback speelt. Leeg of afwezig = oud gedrag: de eerste handback-stap
+  // met een locatie.
+  if (phase === 'handback' && sc.assignment?.handbackLocationId) {
+    return sc.assignment.handbackLocationId;
+  }
 
   // Fallback voor secure: SOP-stappen in deze fase (achterwaarts compatibel
   // met scenarios die secure-stappen met locatie definiëren maar geen
