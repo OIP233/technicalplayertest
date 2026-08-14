@@ -9254,7 +9254,10 @@ COMMUNICATIE-DOELMATIGHEID — beoordeel apart en streng op basis van de COMMUNI
   (f) Pro-actief vs reactief — komt de deelnemer zélf met meldingen en updates, of wacht hij tot de CRO vraagt?
   (g) Readback/bevestiging — bevestigt de deelnemer ontvangen instructies of kritieke informatie?
   Onderbouw met korte, letterlijke citaten uit de registratie (max 15 woorden per citaat).
-
+${sc?.debriefingPrompt?.trim() ? `
+SPECIFIEKE DEBRIEFING-INSTRUCTIES VOOR DIT SCENARIO — deze gaan vóór op de algemene instructies hierboven:
+${sc.debriefingPrompt.trim()}
+` : ''}
 GEEF JE DEBRIEF UITSLUITEND ALS GELDIG JSON-OBJECT — geen tekst eromheen, geen markdown-fences:
 {
   "score": <getal 1-10>,
