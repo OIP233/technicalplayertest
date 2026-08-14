@@ -8544,7 +8544,7 @@ function renderDocumenten(openId) {
           <div class="title">${esc(d.titel || d.title || '')}</div>
           ${d.soort ? `<div class="ref">${esc(d.soort)}</div>` : ''}
         </div>
-        <pre style="white-space:pre-wrap;font-family:var(--mono,monospace);font-size:11px;line-height:1.5;color:var(--text);margin:0 0 12px">${esc(d.inhoud || d.body)}</pre>
+        <pre style="white-space:pre;overflow-x:auto;font-family:var(--mono,monospace);font-size:11px;line-height:1.5;color:var(--text);margin:0 0 12px">${esc(d.inhoud || d.body)}</pre>
         <div class="proc-guideline" style="cursor:pointer" onclick="renderDocumenten()">${t('docs.back')}</div>`;
       return;
     }
