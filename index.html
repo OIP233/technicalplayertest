@@ -1119,7 +1119,11 @@ input, textarea {
   position: relative;
   background: #000;
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  /* v36: het waarneemblok eronder is gegroeid (vier zintuigregels i.p.v. één
+     knoppenrij). Laat het veldzicht daarom meegeven op krappe laptopschermen
+     in plaats van de rest uit beeld te duwen. */
+  flex-shrink: 1;
+  min-height: clamp(150px, 24vh, 240px);
   aspect-ratio: 16 / 9;
   /* v18: viewport-aware sizing zodat de middle-panel inhoud past op laptop-
      schermen zonder fullscreen. clamp() houdt het frame tussen 200px (op
@@ -1232,8 +1236,10 @@ input, textarea {
   line-height: 1.55;
   color: var(--text);
   flex-shrink: 0;
-  max-height: 140px;   /* v18: was 160, iets compacter voor laptop-fit */
-  min-height: 64px;    /* v18: was 80 */
+  /* v36: viewport-afhankelijk, zodat het blok samen met het zintuigpaneel
+     eronder ook op een 768px-hoog laptopscherm past. */
+  max-height: clamp(88px, 15vh, 140px);
+  min-height: 56px;
   overflow-y: auto;
   position: relative;
   transition: background 0.4s ease, box-shadow 0.4s ease;
@@ -1381,6 +1387,159 @@ input, textarea {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   v36: ZINTUIGPANEEL
+   Vervangt de vier losse waarneem-knoppen door vier permanente
+   regels. Elke regel houdt zijn eigen laatste waarneming vast, zodat
+   waarnemingen elkaar niet meer overschrijven, en draagt zijn eigen
+   status: nieuw (ongelezen), verouderd (sinds fase-/locatiewissel) of
+   nog niet waargenomen. Zo is in één oogopslag zichtbaar wat er is
+   waargenomen én wat er is blijven liggen.
+   ───────────────────────────────────────────────────────────── */
+#sense-list {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  max-height: clamp(104px, 20vh, 184px);
+  overflow-y: auto;
+}
+.sense-row {
+  display: grid;
+  grid-template-columns: 86px 1fr auto;
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: var(--panel);
+  border: 0;
+  border-left: 3px solid transparent;
+  padding: 5px 10px 5px 9px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.3s ease;
+}
+.sense-row:hover:not(:disabled) { background: var(--panel-sub); }
+.sense-row:disabled { opacity: 0.4; cursor: not-allowed; }
+.sense-row .sr-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  padding-top: 1px;
+  white-space: nowrap;
+}
+.sense-row:hover:not(:disabled) .sr-name { color: var(--cyan); }
+.sense-row .sr-text {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text);
+  /* Drie regels is ruim voor een waarneming van één à twee zinnen; langer
+     wordt afgekapt zodat vier zintuigen naast elkaar leesbaar blijven.
+     De volledige tekst blijft beschikbaar als tooltip (title). */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Nog niet waargenomen — uitnodiging in plaats van inhoud. */
+.sense-row.empty .sr-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+/* Verouderd: de waarneming stamt van vóór de laatste fase-/locatiewissel.
+   Tekst blijft leesbaar (de deelnemer moet kunnen vergelijken) maar is
+   zichtbaar gedimd, met een amber rand als uitnodiging opnieuw te kijken. */
+.sense-row.stale { border-left-color: var(--amber); }
+.sense-row.stale .sr-text { color: var(--text-dim); }
+/* Nieuw en nog niet bekeken — blijft staan tot de deelnemer de regel
+   daadwerkelijk aanwijst of aanklikt. Geen aflopende animatie dus. */
+.sense-row.unread { border-left-color: var(--cyan); background: var(--cyan-bg); }
+.sense-row .sr-tag {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  align-self: center;
+  display: none;
+}
+.sense-row.unread .sr-tag.tag-new,
+.sense-row.stale:not(.unread) .sr-tag.tag-stale,
+.sense-row.empty:not(.unread) .sr-tag.tag-todo { display: inline-block; }
+.sr-tag.tag-new   { background: var(--cyan); color: var(--bg-deep); font-weight: 700; }
+.sr-tag.tag-stale { background: rgba(224,160,48,0.18); color: var(--amber); }
+.sr-tag.tag-todo  { background: var(--panel-sub); color: var(--text-muted); }
+.sense-row .sr-time {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  margin-left: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* Zachte attentie-puls op een zintuig dat in deze fase nog nooit is
+   gebruikt. Start pas na een tijdje (JS zet de class), zodat het geen
+   ruis is bij de start van elke fase. */
+.sense-row.nudge .sr-name { animation: sense-nudge 2.6s ease-in-out infinite; }
+@keyframes sense-nudge {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; color: var(--cyan); }
+}
+/* Korte bevestiging dat een regel zojuist is bijgewerkt. */
+.sense-row.flash { animation: sense-flash 1.6s ease-out; }
+@keyframes sense-flash {
+  0%   { background: #1f7088; }
+  60%  { background: var(--cyan-bg); }
+  100% { background: var(--panel); }
+}
+
+/* Blijvende telling van ongelezen wijzigingen in de kop van het blok.
+   Verdwijnt pas als de deelnemer hem aanklikt of de regels bekijkt. */
+#env-change-badge {
+  display: none;
+  margin-left: auto;
+  align-items: center;
+  gap: 5px;
+  background: var(--cyan);
+  color: var(--bg-deep);
+  border: 0;
+  border-radius: 10px;
+  padding: 2px 9px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  animation: badge-pulse 1.8s ease-in-out infinite;
+}
+#env-change-badge.show { display: inline-flex; }
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,232,255,0.55); }
+  50%      { box-shadow: 0 0 0 5px rgba(0,232,255,0); }
+}
+/* Scroll-hint: laat zien dát er meer in het blok staat dan zichtbaar is. */
+#env-more {
+  display: none;
+  position: sticky;
+  bottom: -1px;
+  margin: 4px -18px -12px;
+  padding: 2px 18px 3px;
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--panel-sub) 55%);
+  text-align: center;
+}
+#environment-text.has-more #env-more { display: block; }
 
 #input-bar {
   flex: 0 0 auto;
@@ -2898,16 +3057,44 @@ html body {
       </div>
 
       <div id="environment-text">
-        <span class="env-label"><span data-i18n="env.label">Je neemt waar</span><span class="live-dot" title="Dynamische waarneming — wijzigt mee met de situatie" data-i18n-title="env.liveTitle"></span></span>
+        <span class="env-label"><span data-i18n="env.label">Je neemt waar</span><span class="live-dot" title="Dynamische waarneming — wijzigt mee met de situatie" data-i18n-title="env.liveTitle"></span><button type="button" id="env-change-badge" onclick="ackObservations()" title="Er is iets veranderd — klik om te bevestigen dat je het gezien hebt" data-i18n-title="env.badgeTitle"><span id="env-change-count">1</span> <span data-i18n="env.badgeNew">nieuw</span></button></span>
         <span class="env-note" data-i18n="env.note">De mensen aan de radio zien dit niet — meld wat van belang is via de radio.</span>
         <span id="environment-content">—</span>
+        <span id="env-more" data-i18n="env.more">▾ scroll voor meer</span>
       </div>
 
-      <div class="observation-buttons">
-        <button class="obs-btn" onclick="observe('zicht')" data-i18n="obs.look">👁 Kijk</button>
-        <button class="obs-btn" onclick="observe('geluid')" data-i18n="obs.listen">👂 Luister</button>
-        <button class="obs-btn" onclick="observe('geur')" data-i18n="obs.smell">👃 Ruik</button>
-        <button class="obs-btn" onclick="observe('aanraking')" data-i18n="obs.touch">✋ Voel</button>
+      <!-- v36: zintuigpaneel. Vier permanente regels in plaats van vier knoppen:
+           elke regel bewaart zijn eigen laatste waarneming en toont zijn status
+           (nieuw / verouderd / nog niet waargenomen). Klikken = opnieuw waarnemen. -->
+      <div id="sense-list">
+        <button class="sense-row empty" id="sense-zicht" data-sense="zicht" onclick="observe('zicht')">
+          <span class="sr-name">👁 <span data-i18n="obs.lookShort">Kijk</span><span class="sr-time"></span></span>
+          <span class="sr-text">nog niet waargenomen — klik om te kijken</span>
+          <span class="sr-tag tag-new" data-i18n="obs.tagNew">nieuw</span>
+          <span class="sr-tag tag-stale" data-i18n="obs.tagStale">verouderd</span>
+          <span class="sr-tag tag-todo" data-i18n="obs.tagTodo">niet gedaan</span>
+        </button>
+        <button class="sense-row empty" id="sense-geluid" data-sense="geluid" onclick="observe('geluid')">
+          <span class="sr-name">👂 <span data-i18n="obs.listenShort">Luister</span><span class="sr-time"></span></span>
+          <span class="sr-text">nog niet waargenomen — klik om te luisteren</span>
+          <span class="sr-tag tag-new" data-i18n="obs.tagNew">nieuw</span>
+          <span class="sr-tag tag-stale" data-i18n="obs.tagStale">verouderd</span>
+          <span class="sr-tag tag-todo" data-i18n="obs.tagTodo">niet gedaan</span>
+        </button>
+        <button class="sense-row empty" id="sense-geur" data-sense="geur" onclick="observe('geur')">
+          <span class="sr-name">👃 <span data-i18n="obs.smellShort">Ruik</span><span class="sr-time"></span></span>
+          <span class="sr-text">nog niet waargenomen — klik om te ruiken</span>
+          <span class="sr-tag tag-new" data-i18n="obs.tagNew">nieuw</span>
+          <span class="sr-tag tag-stale" data-i18n="obs.tagStale">verouderd</span>
+          <span class="sr-tag tag-todo" data-i18n="obs.tagTodo">niet gedaan</span>
+        </button>
+        <button class="sense-row empty" id="sense-aanraking" data-sense="aanraking" onclick="observe('aanraking')">
+          <span class="sr-name">✋ <span data-i18n="obs.touchShort">Voel</span><span class="sr-time"></span></span>
+          <span class="sr-text">nog niet waargenomen — klik om te voelen</span>
+          <span class="sr-tag tag-new" data-i18n="obs.tagNew">nieuw</span>
+          <span class="sr-tag tag-stale" data-i18n="obs.tagStale">verouderd</span>
+          <span class="sr-tag tag-todo" data-i18n="obs.tagTodo">niet gedaan</span>
+        </button>
       </div>
 
       <div id="input-bar">
@@ -3846,6 +4033,14 @@ const STATE = {
   endHoldPoint: null,                   // hp object indien LSR-overtreding
   envText: '',                          // huidige omgevingstekst
   envInitialized: false,                // pas na eerste render mag flash effect
+  // v36: zintuigpaneel — per zintuig de laatste waarneming plus status.
+  // {text, atMs, unread, stale, observedThisPhase}
+  senses: {},
+  pendingSense: null,                   // zintuig waar de deelnemer zojuist zelf om vroeg
+  envUnread: false,                     // omgevingstekst/signalen gewijzigd, nog niet bevestigd
+  phaseStartMs: 0,                      // begin van de huidige fase — voor de attentie-puls
+  _lastCueMs: 0,                        // throttle op het waarneem-geluidssignaal
+  _nudgeTimer: null,
   _loadedSlideUrl: null,                // URL die momenteel in storyline-iframe geladen is
   feedMessages: [],                     // {role, text, instructor: bool, channel}
   commLog: [],                          // {time, dir:'out'|'in', speaker, text} — communicatie-registratie
@@ -4096,9 +4291,20 @@ const I18N = {
     'env.note': 'De mensen aan de radio zien dit niet — meld wat van belang is via de radio.',
     'env.liveTitle': 'Dynamische waarneming — wijzigt mee met de situatie',
     'coach.envTitle': '👁 Alleen jij neemt dit waar',
-    'coach.envBody': 'Dit blok toont wat jij ter plaatse ziet, hoort en ruikt. De mensen aan de andere kant van de radio (zoals de vergunningverstrekker) zien dit niet. Beoordeel zelf wat belangrijk is en meld het via de radio.',
+    'coach.envBody': 'Hierboven staat de situatie ter plaatse. Daaronder staan je vier zintuigen: klik erop om bewust te kijken, luisteren, ruiken of voelen. Elke waarneming blijft staan. Verandert er iets, dan verschijnt er een blauw NIEUW-merkteken dat blijft staan tot je het hebt gezien. De mensen aan de andere kant van de radio (zoals de vergunningverstrekker) zien dit alles niet — meld zelf wat van belang is.',
     'coach.gotIt': 'Begrepen',
     'obs.look': '👁 Kijk', 'obs.listen': '👂 Luister', 'obs.smell': '👃 Ruik', 'obs.touch': '✋ Voel',
+    'obs.lookShort': 'Kijk', 'obs.listenShort': 'Luister', 'obs.smellShort': 'Ruik', 'obs.touchShort': 'Voel',
+    'obs.emptyLook': 'nog niet waargenomen — klik om te kijken',
+    'obs.emptyListen': 'nog niet waargenomen — klik om te luisteren',
+    'obs.emptySmell': 'nog niet waargenomen — klik om te ruiken',
+    'obs.emptyTouch': 'nog niet waargenomen — klik om te voelen',
+    'obs.tagNew': 'nieuw', 'obs.tagStale': 'verouderd', 'obs.tagTodo': 'niet gedaan',
+    'obs.rowTitle': 'Klik om opnieuw waar te nemen',
+    'env.badgeNew': 'nieuw',
+    'env.badgeTitle': 'Er is iets veranderd — klik om te bevestigen dat je het gezien hebt',
+    'env.more': '▾ scroll voor meer',
+    'env.changed': 'De situatie ter plaatse is veranderd.',
     'input.speakTo': 'Spreek tot:',
     'voice.dismissTitle': 'Verbergen',
     'voice.recording': 'Opname loopt…',
@@ -4205,9 +4411,20 @@ const I18N = {
     'env.note': 'The people on the radio cannot see this — report what matters over the radio.',
     'env.liveTitle': 'Dynamic observation — changes with the situation',
     'coach.envTitle': '👁 Only you perceive this',
-    'coach.envBody': 'This panel shows what you see, hear and smell on site. The people on the other end of the radio (such as the permit issuer) cannot see it. Judge for yourself what matters and report it over the radio.',
+    'coach.envBody': 'Above is the situation on site. Below are your four senses: click one to deliberately look, listen, smell or feel. Every observation stays on screen. When something changes, a blue NEW marker appears and stays until you have seen it. The people on the other end of the radio (such as the permit issuer) see none of this — report what matters yourself.',
     'coach.gotIt': 'Got it',
     'obs.look': '👁 Look', 'obs.listen': '👂 Listen', 'obs.smell': '👃 Smell', 'obs.touch': '✋ Feel',
+    'obs.lookShort': 'Look', 'obs.listenShort': 'Listen', 'obs.smellShort': 'Smell', 'obs.touchShort': 'Feel',
+    'obs.emptyLook': 'not yet observed — click to look',
+    'obs.emptyListen': 'not yet observed — click to listen',
+    'obs.emptySmell': 'not yet observed — click to smell',
+    'obs.emptyTouch': 'not yet observed — click to feel',
+    'obs.tagNew': 'new', 'obs.tagStale': 'outdated', 'obs.tagTodo': 'not done',
+    'obs.rowTitle': 'Click to observe again',
+    'env.badgeNew': 'new',
+    'env.badgeTitle': 'Something has changed — click to confirm you have seen it',
+    'env.more': '▾ scroll for more',
+    'env.changed': 'The situation on site has changed.',
     'input.speakTo': 'Speak to:',
     'voice.dismissTitle': 'Hide',
     'voice.recording': 'Recording…',
@@ -5643,7 +5860,15 @@ function positionEnvCoachmark() {
   const cm = $('env-coachmark');
   if (!anchor || !cm || !cm.classList.contains('show')) return;
   const r = anchor.getBoundingClientRect();
-  const top = r.bottom + 10;
+  // v36: de coach-mark mag het zintuigpaneel niet bedekken — dat is juist wat
+  // hij uitlegt. Plaats hem daarom onder het hele waarneemblok, en klap hem
+  // boven het blok als hij onderaan niet meer past.
+  const list = $('sense-list');
+  const bottom = list ? Math.max(r.bottom, list.getBoundingClientRect().bottom) : r.bottom;
+  let top = bottom + 10;
+  if (top + cm.offsetHeight > window.innerHeight - 12) {
+    top = Math.max(12, r.top - cm.offsetHeight - 10);
+  }
   let left = r.left + r.width / 2 - cm.offsetWidth / 2;
   left = Math.max(12, Math.min(left, window.innerWidth - cm.offsetWidth - 12));
   cm.style.top = top + 'px';
@@ -5652,6 +5877,8 @@ function positionEnvCoachmark() {
   if (arrow) {
     const arrowLeft = (r.left + r.width / 2) - left;
     arrow.style.left = Math.max(14, Math.min(arrowLeft, cm.offsetWidth - 28)) + 'px';
+    // Boven het blok wijst een pijl aan de bovenkant de verkeerde kant op.
+    arrow.style.display = (top < r.top) ? 'none' : '';
   }
 }
 function dismissEnvCoachmark() {
@@ -6392,6 +6619,31 @@ function playEffect(name) {
         [{ ratio: 2, vol: 0.10 }]);
       break;
     }
+    case 'observe-cue': {
+      // v36: zacht twee-tonig signaal (E6 → B5, dalend) bij een ongevraagde
+      // wijziging in het waarneemblok. Bewust laag in volume en korter dan de
+      // instructeur-chime: het moet de aandacht trekken zonder het
+      // radioverkeer te overstemmen of als alarm te klinken.
+      const blip = (freq, startOffset, dur, vol) => {
+        const start = now + startOffset;
+        const stop = start + dur;
+        const env = ctx.createGain();
+        env.gain.setValueAtTime(0, start);
+        env.gain.linearRampToValueAtTime(vol, start + 0.010);
+        env.gain.setValueAtTime(vol, stop - 0.030);
+        env.gain.linearRampToValueAtTime(0, stop);
+        env.connect(AUDIO.eventGain);
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+        osc.connect(env);
+        osc.start(start);
+        osc.stop(stop);
+      };
+      blip(1319, 0.00, 0.09, 0.16);   // E6
+      blip(988,  0.11, 0.13, 0.13);   // B5
+      break;
+    }
     default:
       console.warn('Onbekend audio effect:', name);
   }
@@ -6689,7 +6941,7 @@ function resumeScenario() {
 function applyPauseLock(locked) {
   const send = $('btn-send');
   if (send) send.disabled = locked || STATE.isProcessing;
-  document.querySelectorAll('.obs-btn').forEach(b => {
+  document.querySelectorAll('.obs-btn, .sense-row').forEach(b => {
     b.disabled = locked || STATE.isProcessing;
   });
   const inp = $('input-text');
@@ -6918,7 +7170,9 @@ ${lines.join('\n')}
 ═══════════════════════════════════════════════════════════
 OMGEVINGSSIGNALEN — statische waarnemingen per locatie+fase
 ═══════════════════════════════════════════════════════════
-De deelnemer ziet deze signalen automatisch in de Situatie-tab zodra hij op de juiste locatie/fase is. Hij ziet ze ZONDER significantie-labels — hij moet zelf inschatten wat belangrijk is.
+De deelnemer ziet deze signalen automatisch in zijn waarneempaneel ("Je neemt waar") zodra hij op de juiste locatie/fase is. Hij ziet ze ZONDER significantie-labels — hij moet zelf inschatten wat belangrijk is.
+
+BELANGRIJK: omdat de deelnemer ze al ziet, mag je ze NIET nog eens in een bericht beschrijven. Herhaal een signaal dus nooit in een rolbericht en ook niet als verteltekst; dat maakt de communicatie onlogisch (de radiorollen kunnen het niet waarnemen) en zet hetzelfde signaal twee keer in beeld.
 
 ${sigBlocks}
 
@@ -7182,9 +7436,31 @@ Voorbeelden:
 [ROL: ${(sc.roles[1]||{}).name || 'Collega'}] Ja hoor, ik ben hier ook.
 [ROL: Instructeur] Wacht — wat ben je nu van plan?
 
+GEEN VERTELTEKST — de harde scheiding tussen praten en waarnemen:
+Elke regel van je antwoord begint met [ROL: <naam>], met [WAARNEMING: <zintuig>], of met een ander systeemtoken. Verteltekst zonder tag bestaat niet in dit protocol.
+- Alles wat de deelnemer ZIET, HOORT, RUIKT of VOELT gaat UITSLUITEND via [WAARNEMING: …]. Het verschijnt dan in zijn waarneempaneel, waar hij het als nieuw gemarkeerd ziet.
+- Een radiorol beschrijft NOOIT de omgeving van de deelnemer. Hij zit elders en weet alleen wat de deelnemer heeft gemeld, wat zijn eigen systemen tonen, of wat hij op zijn eigen plek waarneemt.
+- Zet dus NOOIT een beschrijvende zin achter of onder een rolbericht. Zo'n zin hoort in een [WAARNEMING]-token.
+
+FOUT (de radiorol meldt iets wat hij onmogelijk kan waarnemen, en het signaal staat dubbel in beeld):
+[ROL: ${(sc.roles[0]||{}).name || 'Radiopost'}] Begrepen, ga je gang.
+Je hoort het sissen sterker worden en ruikt een zoetige lucht bij de flens.
+
+GOED (de rol zegt alleen wat hij kan weten; de waarneming gaat naar het paneel):
+[ROL: ${(sc.roles[0]||{}).name || 'Radiopost'}] Begrepen, ga je gang.
+[WAARNEMING: geluid] Het sissen bij de flens is duidelijk sterker dan zojuist.
+[WAARNEMING: geur] Een zoetige lucht die je in je keel voelt prikken.
+
 Beschikbare systeemtokens (op een aparte regel):
 [FASE: ${isIncident ? 'assess|act|report' : isPermitWork(sc) ? 'acceptance|prepare|execute|deviation|handback' : 'prep|execute|deviation|secure'}]  — wissel actieve fase
-[WAARNEMING: zicht|geluid|geur|aanraking] beschrijvende tekst  — werk omgevingstekst bij
+[WAARNEMING: zicht|geluid|geur|aanraking] beschrijvende tekst  — vul de regel van dít zintuig in het waarneempaneel
+    De deelnemer heeft vier zintuigregels (kijk / luister / ruik / voel) die elk hun eigen laatste waarneming vasthouden.
+    Eén token vult precies één regel; de andere drie blijven staan zoals ze waren. Wil je meerdere zintuigen bijwerken,
+    stuur dan meerdere tokens, elk op een eigen regel. Schrijf één of twee zinnen per zintuig, in de tegenwoordige tijd,
+    en beschrijf UITSLUITEND wat via dát zintuig waarneembaar is — geen conclusies, geen instructies.
+    Stuur een waarneming ook ONGEVRAAGD zodra de situatie ter plaatse merkbaar verandert (geluid wordt sterker, geur komt
+    op, damp wordt zichtbaar). De deelnemer krijgt die regel dan zichtbaar als 'nieuw' gemarkeerd. Doe dit alleen bij een
+    echte verandering — niet elke beurt, want dan valt een verandering niet meer op.
 [ACTIE-VOLTOOID: <action-id>]  — markeer een uitvoerings-actie of verwachte-actie als voltooid
 [AUDIO: <effect-name>]  — speel een geluidseffect af; één per beurt, alleen op betekenisvolle momenten
 [HOLD-POINT: <hp-id>]  — scenario stopt direct (gebruik deze voor ALLE hold-point categorieën)
@@ -7218,6 +7494,7 @@ DYNAMIEK EN REALISME
 WAARNEMING IS LOKAAL — de radiorollen kijken NIET mee:
 - De radiorollen (zoals de vergunningverstrekker, installatieverantwoordelijke, operatie, supervisor of CRO) zitten elders en kunnen NIET zien, horen of ruiken wat de deelnemer ter plaatse waarneemt. De omgevingssignalen in het "Je neemt waar"-blok zijn UITSLUITEND voor de deelnemer. De radio weet alleen wat de deelnemer EXPLICIET meldt.
 - Reageer dus NOOIT uit jezelf op een omgevingssignaal dat de deelnemer nog niet heeft gerapporteerd (geen "ik zie ook dat..."), en doe nooit alsof een radiorol een waarneming ter plaatse al kent.
+- Beschrijf de omgeving ook nooit NAMENS de deelnemer in een bericht ("je ziet…", "je ruikt…", "het sissen wordt sterker"). Zulke zinnen horen in een [WAARNEMING]-token, niet in het radioverkeer. Als de deelnemer iets meldt, bevestigt de rol alleen de MELDING ("begrepen, sissend geluid bij de flens, over") — hij herhaalt de waarneming niet alsof hij hem zelf doet.
 - Als de deelnemer aanneemt dat de mensen aan de radio meekijken — bv. "zie je dat?", "jullie zien die restdruk toch", of handelt alsof de vergunningverstrekker/operatie de situatie ter plaatse al kent zonder het te melden — laat de aangesproken radiorol dat ÉÉN keer, kort en in-fictie corrigeren: maak duidelijk dat hij vanaf daar niets kan zien en vraag de deelnemer te beschrijven wat hij waarneemt (bv. "[ROL: Verg.verstrekker] Ik kan vanaf hier niets zien — beschrijf eens wat je daar precies waarneemt, over."). Geen college, geen herhaling, en verklap NOOIT het signaal of de juiste actie.
 
 ═══════════════════════════════════════════════════════════
@@ -7328,7 +7605,7 @@ async function callClaude(userMessage) {
   if (STATE.isProcessing || STATE.scenarioEnded) return;
   STATE.isProcessing = true;
   $('btn-send').disabled = true;
-  document.querySelectorAll('.obs-btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('.obs-btn, .sense-row').forEach(b => b.disabled = true);
   syncPttToSendButton();
   showTyping(true);
 
@@ -7370,7 +7647,7 @@ async function callClaude(userMessage) {
     STATE.isProcessing = false;
     if (!STATE.scenarioEnded) {
       $('btn-send').disabled = false;
-      document.querySelectorAll('.obs-btn').forEach(b => b.disabled = false);
+      document.querySelectorAll('.obs-btn, .sense-row').forEach(b => b.disabled = false);
     }
     syncPttToSendButton();
   }
@@ -7401,6 +7678,10 @@ async function parseAndApplyAIResponse(reply) {
   for (const m of obsMatches) {
     updateEnvironment(m[2].trim(), m[1]);
   }
+  // v36: een openstaand verzoek geldt maar voor één beurt. Blijft het staan,
+  // dan zou een latere ongevraagde waarneming ten onrechte als 'zelf gevraagd'
+  // gelden en dus geen NIEUW-markering krijgen.
+  STATE.pendingSense = null;
 
   // 4b. Actie-voltooid markeringen (AI vinkt execute-acties af)
   const actionMatches = [...reply.matchAll(/\[ACTIE-VOLTOOID:\s*([a-zA-Z0-9_-]+)\s*\]/g)];
@@ -7457,8 +7738,18 @@ async function parseAndApplyAIResponse(reply) {
     segments.push({ role: getCurrentChannelRoleName(), text: cleanReply.trim() });
   }
 
-  // Sequentieel: wacht op typewriter van vorige bericht voor volgende start
+  // v36: verteltekst hoort niet in het radioverkeer. Zinnen als "Je ruikt een
+  // zoetige lucht" die de AI aan een rolbericht vastplakt, laten een radiorol
+  // iets zeggen wat hij vanaf zijn plek onmogelijk kan waarnemen. Die regels
+  // halen we uit het bericht en zetten we in het zintuigpaneel.
+  const spoken = [];
   for (const seg of segments) {
+    const rest = extractNarrationToSenses(seg.text);
+    if (rest) spoken.push({ role: seg.role, text: rest });
+  }
+
+  // Sequentieel: wacht op typewriter van vorige bericht voor volgende start
+  for (const seg of spoken) {
     await addFeedMessage(seg.role, seg.text);
   }
 
@@ -7467,7 +7758,7 @@ async function parseAndApplyAIResponse(reply) {
     // await't elke typewriter). Geef de deelnemer nog een leespauze die
     // meeschaalt met de lengte van het slotbericht, zodat de overgang naar
     // de debrief niet midden in het lezen valt.
-    const lastSeg = segments[segments.length - 1];
+    const lastSeg = spoken[spoken.length - 1];
     const lastLen = lastSeg ? (lastSeg.text || '').length : 0;
     const readPause = Math.min(6000, Math.max(2600, lastLen * 28));
     setTimeout(() => endScenario('completed'), readPause);
@@ -7840,7 +8131,25 @@ function renderEnvironment() {
   const newText = contentEl.textContent; // werkt voor beide takken
   if (STATE.envInitialized && (newText !== oldText || oldHadSignals !== (matchingSignals.length > 0))) {
     flashEnvironment();
+    // v36: een flash alleen is te missen — markeer de wijziging blijvend
+    // en geef één zacht geluidssignaal.
+    STATE.envUnread = true;
+    renderChangeBadge();
+    observationCue();
   }
+  updateEnvMoreHint();
+}
+
+// Toont onderin het omgevingsblok of er meer tekst buiten beeld staat.
+// Zonder deze hint scrolt een derde of vierde signaal ongemerkt weg.
+function updateEnvMoreHint() {
+  const el = $('environment-text');
+  if (!el) return;
+  requestAnimationFrame(() => {
+    const overflows = el.scrollHeight - el.clientHeight > 4;
+    const atBottom  = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    el.classList.toggle('has-more', overflows && !atBottom);
+  });
 }
 
 // Lokaal helper-tje om HTML te escapen — gebruikt door renderEnvironment.
@@ -7853,12 +8162,242 @@ function escHtml(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function updateEnvironment(text, sense) {
-  STATE.envText = text;
-  const contentEl = $('environment-content');
-  contentEl.textContent = text;
-  if (STATE.envInitialized) flashEnvironment();
+/* ═══════════════════════════════════════════════════════════
+   v36 — ZINTUIGPANEEL
+   Vóór v36 schreef elke [WAARNEMING: …] één gedeelde omgevingsregel
+   over: klikte de deelnemer eerst 'Kijk' en daarna 'Ruik', dan was de
+   kijk-waarneming weg en verdween ook de situatiebeschrijving. Nu krijgt
+   elk zintuig zijn eigen regel die blijft staan, met een eigen status:
+     • nieuw      — de waarneming kwam ongevraagd binnen (situatie wijzigt)
+                    en is nog niet bekeken; blijft gemarkeerd tot dat wel zo is
+     • verouderd  — stamt van vóór de laatste fase- of locatiewissel
+     • niet gedaan— dit zintuig is in deze fase nog niet gebruikt
+   ═══════════════════════════════════════════════════════════ */
+
+const SENSES = ['zicht', 'geluid', 'geur', 'aanraking'];
+const SENSE_EMPTY_KEY = {
+  zicht: 'obs.emptyLook', geluid: 'obs.emptyListen',
+  geur: 'obs.emptySmell', aanraking: 'obs.emptyTouch'
+};
+
+function getSense(sense) {
+  if (!STATE.senses[sense]) {
+    STATE.senses[sense] = { text: '', atMs: 0, unread: false, stale: false, observedThisPhase: false };
+  }
+  return STATE.senses[sense];
 }
+
+function resetSenses() {
+  STATE.senses = {};
+  STATE.pendingSense = null;
+  STATE.envUnread = false;
+  STATE.phaseStartMs = Date.now();
+  renderSenses();
+  renderChangeBadge();
+}
+
+// Verklaart alle bestaande waarnemingen verouderd. Wordt aangeroepen bij een
+// fase- of locatiewissel: wat je twee minuten geleden rook, hoeft hier en nu
+// niet meer te kloppen. De tekst blijft staan (de deelnemer moet kunnen
+// vergelijken), maar de regel nodigt zichtbaar uit opnieuw waar te nemen.
+function staleAllSenses() {
+  SENSES.forEach(s => {
+    const st = getSense(s);
+    st.observedThisPhase = false;
+    if (st.text) st.stale = true;
+  });
+  STATE.phaseStartMs = Date.now();
+  renderSenses();
+}
+
+// Eén waarneming binnen. `sense` is het zintuig; `requested` geeft aan of de
+// deelnemer er zelf om vroeg (dan kijkt hij er al naar en hoeft er geen
+// blijvende markering op) of dat het scenario hem ongevraagd toestuurt.
+function updateEnvironment(text, sense) {
+  if (!sense || SENSES.indexOf(sense) < 0) {
+    // Geen (geldig) zintuig meegegeven — val terug op het oude gedrag en
+    // werk de algemene omgevingstekst bij.
+    STATE.envText = text;
+    renderEnvironment();
+    return;
+  }
+  const requested = STATE.pendingSense === sense;
+  if (requested) STATE.pendingSense = null;
+
+  const st = getSense(sense);
+  const changed = st.text !== text;
+  st.text = text;
+  st.atMs = Date.now();
+  st.stale = false;
+  st.observedThisPhase = true;
+  // Zelf gevraagd → de deelnemer kijkt er al naar. Ongevraagd → blijvend
+  // markeren tot hij het echt gezien heeft.
+  if (!requested && changed) st.unread = true;
+
+  renderSenses();
+  flashSenseRow(sense);
+  if (!requested && changed) {
+    renderChangeBadge();
+    observationCue();
+  }
+}
+
+// Tekent de vier zintuigregels opnieuw op basis van STATE.senses.
+function renderSenses() {
+  SENSES.forEach(sense => {
+    const row = $('sense-' + sense);
+    if (!row) return;
+    const st = getSense(sense);
+    const textEl = row.querySelector('.sr-text');
+    const timeEl = row.querySelector('.sr-time');
+
+    if (st.text) {
+      textEl.textContent = st.text;
+      if (timeEl) timeEl.textContent = fmtSenseTime(st.atMs);
+    } else {
+      textEl.textContent = t(SENSE_EMPTY_KEY[sense]);
+      if (timeEl) timeEl.textContent = '';
+    }
+    row.classList.toggle('empty',  !st.text);
+    row.classList.toggle('unread', !!st.unread);
+    row.classList.toggle('stale',  !!st.stale && !!st.text);
+    // De regel kapt na drie regels af; de tooltip houdt de volledige tekst
+    // bereikbaar zonder dat het paneel uitdijt.
+    row.title = st.text ? st.text + '\n\n' + t('obs.rowTitle') : t('obs.rowTitle');
+  });
+  updateNudges();
+}
+
+// Tijdstempel binnen het scenario (mm:ss) — maakt zichtbaar hoe oud een
+// waarneming is zonder dat er inhoudelijke hints uit lekken.
+function fmtSenseTime(ms) {
+  if (!ms || !STATE.scenarioStartMs) return '';
+  const sec = Math.max(0, Math.floor((ms - STATE.scenarioStartMs) / 1000));
+  return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+}
+
+// Zachte puls op zintuigen die in deze fase nog niet zijn gebruikt. Start pas
+// 25 s na de fasewissel: geen ruis bij de start, wél een duwtje voor wie het
+// waarnemen helemaal overslaat. Verklapt niets over de inhoud.
+function updateNudges() {
+  const active = STATE.envInitialized && !STATE.isPaused && !STATE.scenarioEnded
+                 && (Date.now() - STATE.phaseStartMs) > 25000;
+  SENSES.forEach(sense => {
+    const row = $('sense-' + sense);
+    if (!row) return;
+    row.classList.toggle('nudge', active && !getSense(sense).observedThisPhase);
+  });
+}
+
+function flashSenseRow(sense) {
+  const row = $('sense-' + sense);
+  if (!row || !STATE.envInitialized) return;
+  row.classList.remove('flash');
+  void row.offsetWidth;                 // reflow forceren zodat de animatie herstart
+  row.classList.add('flash');
+  setTimeout(() => row.classList.remove('flash'), 1700);
+}
+
+// Blijvende teller in de kop van het blok: zolang er iets ongelezen is, staat
+// hier "<n> NIEUW". Verdwijnt niet vanzelf — alleen als de deelnemer hem
+// aanklikt of de betreffende regel aanwijst.
+function renderChangeBadge() {
+  const badge = $('env-change-badge');
+  if (!badge) return;
+  let n = SENSES.filter(s => getSense(s).unread).length;
+  if (STATE.envUnread) n++;
+  const cnt = $('env-change-count');
+  if (cnt) cnt.textContent = n;
+  badge.classList.toggle('show', n > 0);
+}
+
+// Bevestigen dat alles gezien is.
+function ackObservations() {
+  STATE.envUnread = false;
+  SENSES.forEach(s => { getSense(s).unread = false; });
+  renderSenses();
+  renderChangeBadge();
+}
+
+// Eén regel bevestigen — gebeurt zodra de deelnemer hem aanwijst of aanklikt.
+function ackSense(sense) {
+  const st = getSense(sense);
+  if (!st.unread) return;
+  st.unread = false;
+  renderSenses();
+  renderChangeBadge();
+}
+
+// Zacht geluidssignaal bij een ongevraagde wijziging. Bewust kort en laag in
+// volume: het moet opvallen zonder het radioverkeer te overstemmen. Maximaal
+// één keer per 4 s, zodat een reeks wijzigingen niet gaat rammelen.
+function observationCue() {
+  const now = Date.now();
+  if (now - STATE._lastCueMs < 4000) return;
+  STATE._lastCueMs = now;
+  try { playEffect('observe-cue'); } catch (e) { /* audio nog niet klaar — geen probleem */ }
+}
+
+/* ── Verteltekst uit radioberichten filteren ────────────────────────────────
+   De radiorollen zitten elders: ze kunnen niet zien, horen, ruiken of voelen
+   wat de deelnemer ter plaatse waarneemt. Toch plakt de AI regelmatig een
+   beschrijvende zin aan een rolbericht ("Je hoort het sissen sterker worden"),
+   waardoor de CRO iets meldt wat hij onmogelijk kan weten — en waardoor de
+   omgevingssignalen dubbel in beeld komen.
+
+   Deze filter haalt zulke regels uit het bericht en zet ze in de bijbehorende
+   zintuigregel. Bewust conservatief: alleen een HELE regel die in de tweede
+   persoon met een waarnemingswerkwoord begint. Een rol die in zijn eigen zin
+   "je ziet toch dat…" zegt, blijft dus gewoon staan.
+   ─────────────────────────────────────────────────────────────────────────── */
+const NARRATION_PATTERNS = [
+  { sense: 'zicht',     re: /^(?:je|jij|u)\s+(?:ziet|kijkt|neemt\s+waar|merkt\s+op|constateert)\b/i },
+  { sense: 'geluid',    re: /^(?:je|jij|u)\s+(?:hoort|luistert)\b/i },
+  { sense: 'geur',      re: /^(?:je|jij|u)\s+(?:ruikt)\b/i },
+  { sense: 'aanraking', re: /^(?:je|jij|u)\s+(?:voelt)\b/i },
+  { sense: 'zicht',     re: /^you\s+(?:see|notice|observe)\b/i },
+  { sense: 'geluid',    re: /^you\s+(?:hear|listen)\b/i },
+  { sense: 'geur',      re: /^you\s+(?:smell)\b/i },
+  { sense: 'aanraking', re: /^you\s+(?:feel)\b/i }
+];
+
+// Retourneert de tekst die WEL gesproken mag worden; verplaatste regels
+// belanden in het zintuigpaneel. Lege uitkomst = het hele bericht was
+// verteltekst en er wordt dus niets gezegd.
+function extractNarrationToSenses(text) {
+  if (!text) return '';
+  const keep = [];
+  String(text).split(/\n+/).forEach(rawLine => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const hit = NARRATION_PATTERNS.find(p => p.re.test(line));
+    if (hit) {
+      console.log('[waarneming] verteltekst uit radiobericht gehaald →', hit.sense, ':', line);
+      updateEnvironment(line, hit.sense);
+    } else {
+      keep.push(line);
+    }
+  });
+  return keep.join('\n').trim();
+}
+
+// Koppelingen van het zintuigpaneel. De markup staat vóór dit script, dus de
+// elementen bestaan hier al.
+(function wireSensePanel() {
+  SENSES.forEach(sense => {
+    const row = document.getElementById('sense-' + sense);
+    if (!row) return;
+    // Aanwijzen telt als 'gezien' — de deelnemer heeft de regel dan echt
+    // gelezen. Klikken doet hetzelfde plus een nieuwe waarneming (onclick).
+    row.addEventListener('mouseenter', () => ackSense(sense));
+    row.addEventListener('focus', () => ackSense(sense));
+  });
+  const envEl = document.getElementById('environment-text');
+  if (envEl) envEl.addEventListener('scroll', updateEnvMoreHint);
+  // De attentie-puls hangt aan verstreken tijd; één trage timer volstaat.
+  setInterval(() => { try { updateNudges(); } catch (e) {} }, 5000);
+  window.addEventListener('resize', updateEnvMoreHint);
+})();
 
 function flashEnvironment() {
   const el = $('environment-text');
@@ -8347,6 +8886,9 @@ function setLanguage(lang) {
   );
   // Interface-chrome meteen in de gekozen taal zetten
   try { applyStaticI18n(); } catch (e) { console.warn('[i18n] applyStaticI18n failed:', e); }
+  // v36: het zintuigpaneel schrijft zijn eigen teksten (waarnemingen mogen
+  // niet door applyStaticI18n overschreven worden) — dus expliciet hertekenen.
+  try { renderSenses(); } catch (e) { /* paneel bestaat nog niet */ }
   // Sync voice-module met de gekozen taal (als die al initialised is)
   if (voiceInput && typeof voiceInput.setLanguage === 'function') {
     try { voiceInput.setLanguage(lang); } catch(e) { console.warn('[OIP voice] setLanguage failed:', e); }
@@ -8406,6 +8948,7 @@ async function startScenario() {
   renderChannelSelector();
   renderLocationDropdown();
   renderEnvironment();
+  resetSenses();          // v36: zintuigpaneel leeg en zonder markeringen starten
   tryLoadStorylineSlide();
 
   // Vanaf nu mogen flash-effecten triggeren bij wijzigingen
@@ -8771,6 +9314,10 @@ function setPhase(newPhase) {
   // nieuwe fase/locatie weer in beeld komt (een eerdere AI-waarneming
   // gold voor de vorige fase en mag niet blijven plakken).
   STATE.envText = '';
+  // v36: eerdere waarnemingen gelden voor de vórige fase. Ze blijven staan
+  // ter vergelijking, maar krijgen de status 'verouderd' zodat zichtbaar is
+  // dat opnieuw waarnemen op zijn plaats is.
+  staleAllSenses();
 
   renderTopBar();
   renderLocationDropdown();
@@ -8912,6 +9459,10 @@ function getCurrentChannelRoleName() {
 
 async function observe(sense) {
   if (STATE.isProcessing || STATE.scenarioEnded || STATE.isPaused) return;
+  // v36: de deelnemer vraagt er zelf om — de binnenkomende waarneming hoeft
+  // dan geen blijvende NIEUW-markering te krijgen (hij kijkt er al naar).
+  STATE.pendingSense = sense;
+  ackSense(sense);
   const loc = getCurrentLocation();
   await callClaude(`[OBSERVATIE: ${sense}] (Deelnemer probeert actief waar te nemen via ${sense} op locatie ${loc.label}. Reageer met een waarneming via [WAARNEMING: ${sense}] gevolgd door wat de deelnemer hier en nu via deze zintuig waarneemt.)`);
 }
